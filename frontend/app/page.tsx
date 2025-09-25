@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 // Navigation Bar Component
-function NavigationBar() {
+export function NavigationBar() {
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,12 +43,29 @@ function NavigationBar() {
 
           {/* Right Side - Auth Buttons */}
           <div className="flex items-center space-x-4">
-            <Link 
-              href="/organize" 
-              className="hidden sm:block text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              For Organizers
-            </Link>
+            <div className="relative group">
+              <button className="hidden sm:flex items-center text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                For Organizers
+                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 border border-gray-200 dark:border-gray-700">
+                <Link 
+                  href="/admin/volunteer-matching" 
+                  className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 border-b border-gray-100 dark:border-gray-700 transition-colors"
+                >
+                  Volunteer Matching
+                </Link>
+                <Link 
+                  href="/admin/volunteer-history" 
+                  className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                >
+                  Volunteer History
+                </Link>
+              </div>
+            </div>
             
             <div className="flex items-center space-x-2">
               <Link
@@ -141,7 +158,8 @@ function FeaturesSection() {
     {
       title: "Smart Matching",
       description: "Get matched with opportunities based on your location and skills using our advanced point system.",
-      icon: "🎯"
+      icon: "🎯",
+      href: "/volunteer/volunteer-matching",
     },
     {
       title: "Easy Discovery",
@@ -151,7 +169,8 @@ function FeaturesSection() {
     {
       title: "Track Impact",
       description: "See your volunteering history and the positive impact you're making in your community.",
-      icon: "📊"
+      icon: "📊",
+      href: "/volunteer/volunteer-history",
     }
   ];
 
@@ -169,15 +188,17 @@ function FeaturesSection() {
         
         <div className="grid md:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div key={index} className="text-center p-6 rounded-lg hover:bg-green-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-green-200 dark:hover:border-gray-700">
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                {feature.description}
-              </p>
-            </div>
+            <Link href={feature.href ?? "#"} key={index}>
+              <div className="text-center p-6 rounded-lg hover:bg-green-50 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-green-200 dark:hover:border-gray-700">
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {feature.description}
+                </p>
+              </div>
+            </Link>
           ))}
         </div>
       </div>
