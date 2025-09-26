@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { NavigationBar } from '../../page';
+import NavigationBar from '../../../components/NavigationBar';
 
 // example data for volunteers and events until db is populated
 const volunteers = [

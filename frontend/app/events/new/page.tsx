@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import NavigationBar from '../../../components/NavigationBar';
 
 const skillsList = [
   "Event Planning",
@@ -47,8 +48,9 @@ export default function NewEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <NavigationBar />
+      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 mt-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           Create Event
         </h1>

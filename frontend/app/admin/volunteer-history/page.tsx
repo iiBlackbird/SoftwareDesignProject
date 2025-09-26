@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { NavigationBar } from '../../page';
-import { Navigation } from "@mui/icons-material";
+import NavigationBar from '../../../components/NavigationBar';
+
 
 // example data until database is populated
 const volunteerHistory = [

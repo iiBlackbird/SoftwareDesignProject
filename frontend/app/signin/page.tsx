@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import NavigationBar from '../../components/NavigationBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
@@ -57,7 +58,7 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
     backgroundRepeat: 'no-repeat',
     ...theme.applyStyles('dark', {
       backgroundImage:
-        'radial-gradient(at 50% 50%, hsla(151, 100.00%, 16.10%, 0.50), hsl(150, 30.80%, 5.10%))',
+        'radial-gradient(at 50% 50%, hsla(210, 100%, 16%, 0.5), hsl(220, 30%, 5%))',
     }),
   },
 }));
@@ -117,9 +118,11 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
   };
 
   return (
-    <AppTheme {...props}>
-      <CssBaseline enableColorScheme />
-      <SignInContainer direction="column" justifyContent="space-between">
+    <div>
+      <NavigationBar />
+      <AppTheme {...props}>
+        <CssBaseline enableColorScheme />
+        <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
         <Card variant="outlined">
           {/* <SitemarkIcon /> */}
@@ -230,5 +233,6 @@ export default function SignIn(props: { disableCustomTheme?: boolean }) {
         </Card>
       </SignInContainer>
     </AppTheme>
+    </div>
   );
 }

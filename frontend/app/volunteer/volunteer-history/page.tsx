@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { NavigationBar } from '../../page';
+import NavigationBar from '../../../components/NavigationBar';
 
 // example data until database is populated
 const userVolunteerHistory = [

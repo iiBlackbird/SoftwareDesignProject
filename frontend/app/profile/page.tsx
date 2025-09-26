@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import NavigationBar from '../../components/NavigationBar';
 
 const states = [
   { code: "AL", name: "Alabama" },
@@ -55,7 +56,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <NavigationBar />
+      <div className="py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           User Profile Management
@@ -234,6 +237,7 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );
