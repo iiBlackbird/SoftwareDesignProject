@@ -13,7 +13,7 @@ export function NavigationBar() {
               <span className="text-white font-bold text-lg">?</span>
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">
-              (Site Name Placeholder)
+              GiversGuild
             </span>
           </div>
 
@@ -179,7 +179,7 @@ function FeaturesSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Why Choose (Site Name Placeholder)?
+            Why Choose GiversGuild?
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-300">
             We make volunteering simple, rewarding, and impactful, so you can focus on making a difference in your community.
