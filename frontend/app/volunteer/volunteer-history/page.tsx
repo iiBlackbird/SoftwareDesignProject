@@ -1,24 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NavigationBar from '../../../components/NavigationBar';
 
-// example data until database is populated
-const userVolunteerHistory = [
-  {
-    id: 1,
-    eventName: "Meal Kit Assembly",
-    eventDescription: "Volunteers assemble pre-portioned ingredients and recipes into meal kits",
-    location: "School",
-    requiredSkills: ["Cooking"],
-    urgency: "High",
-    eventDate: "2025-11-15",
-    participationStatus: "Attending",
-  },
-];
+type VolunteerRecord = {
+  id: number;
+  eventName: string;
+  eventDescription: string;
+  location: string;
+  requiredSkills: string[];
+  urgency: string;
+  eventDate: string;
+  participationStatus: string;
+};
 
 export default function UserVolunteerHistory() {
-  const [history] = useState(userVolunteerHistory);
+  const [history, setHistory] = useState<VolunteerRecord[]>([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/user/volunteer-history")
+      .then((res) => res.json())
+      .then((data) => setHistory(data))
+      .catch((err) => console.error("Error fetching data:", err));
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
