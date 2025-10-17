@@ -174,4 +174,105 @@ describe('AdminVolunteerMatchingService', () => {
         const matches = service.getSuggestedMatches();
         expect(matches[0].suggestedEvent).toBe('Event D'); 
     }); 
+
+    it('should keep current bestMatch when points tie, urgency tie, but current event has later date', () => {
+        const user: any = {
+            id: 13,
+            name: 'Later Date Test',
+            skills: ['First Aid'],
+            availability: ['2025-10-20', '2025-10-22'],
+            location: 'City Center',
+        };
+    
+        const event1: any = {
+            eventId: 10,
+            eventName: 'Event Earlier',
+            requiredSkills: ['First Aid'],
+            date: '2025-10-20', // earlier date - should be selected first
+            location: 'City Center',
+            urgency: 'High',
+        };
+    
+        const event2: any = {
+            eventId: 11,
+            eventName: 'Event Later',
+            requiredSkills: ['First Aid'],
+            date: '2025-10-22', // later date - should not replace event1
+            location: 'City Center',
+            urgency: 'High', // same urgency
+        };
+    
+        (service as any).users = [user];
+        (service as any).events = [event1, event2];
+    
+        const matches = service.getSuggestedMatches();
+        
+        // event1 should win because it has the earlier date
+        expect(matches[0].suggestedEvent).toBe('Event Earlier');
+    });
+
+    it('should replace bestMatch when urgency ties but event has earlier date', () => {
+        const user: any = {
+            id: 21,
+            name: 'Earlier Date Tie Test',
+            skills: ['Cooking'],
+            availability: ['2025-11-10', '2025-11-15'],
+            location: 'Community Center',
+        };
+    
+        const event1: any = {
+            eventId: 23,
+            eventName: 'Later Date Event',
+            requiredSkills: ['Cooking'],
+            date: '2025-11-15',
+            location: 'Community Center',
+            urgency: 'Medium',
+        };
+    
+        const event2: any = {
+            eventId: 24,
+            eventName: 'Earlier Date Event',
+            requiredSkills: ['Cooking'],
+            date: '2025-11-10', // earlier date, same urgency
+            location: 'Community Center',
+            urgency: 'Medium',
+        };
+    
+        (service as any).users = [user];
+        (service as any).events = [event1, event2];
+    
+        const matches = service.getSuggestedMatches();
+        expect(matches[0].suggestedEvent).toBe('Earlier Date Event'); // must replace
+    });
+
+    it('should replace bestMatch when urgency is higher but points are equal', () => {
+        const service = new AdminVolunteerMatchingService();
+      
+        const user: any = { id: 1, name: 'Tester' };
+      
+        const eventMedium: any = {
+          eventId: 10,
+          eventName: 'Medium Urgency Event',
+          urgency: 'Medium',
+        };
+      
+        const eventHigh: any = {
+          eventId: 11,
+          eventName: 'High Urgency Event',
+          urgency: 'High',
+        };
+      
+        // simulate equal scoring
+        (service as any).users = [user];
+        (service as any).events = [eventMedium, eventHigh];
+      
+        // mock scoring so both events have equal points
+        jest.spyOn(service as any, 'calculateMatchPoints').mockReturnValue(10);
+      
+        // run matching
+        const matches = service.getSuggestedMatches();
+      
+        // should choose the high urgency one
+        expect(matches[0].suggestedEvent).toBe('High Urgency Event');
+      });
 });

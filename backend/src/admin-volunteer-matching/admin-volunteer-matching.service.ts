@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { SuggestedMatchDto, AssignVolunteerResponseDto } from './dto';
+import { SuggestedMatchDto } from './dto/suggested-match.dto';
+import { AssignVolunteerResponseDto } from './dto/assign-volunteer-response.dto';
 
 interface UserProfile {
   id: number;
