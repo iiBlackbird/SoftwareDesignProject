@@ -12,6 +12,7 @@ describe('EventService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
   };
 
@@ -76,6 +77,69 @@ describe('EventService', () => {
           updatedAt: expect.any(Date),
         },
       });
+    });
+  });
+
+  describe('updateEvent', () => {
+    it('should update an event successfully', async () => {
+      const eventId = '1';
+      const updateEventDto = {
+        eventName: 'Updated Event',
+        description: 'Updated Description',
+        urgency: EventUrgency.HIGH,
+      };
+
+      const existingEvent = {
+        id: eventId,
+        name: 'Original Event',
+        description: 'Original Description',
+        location: 'Original Location',
+        requiredSkills: ['Event Planning'],
+        urgency: 'Normal',
+        eventDate: new Date('2024-12-01'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedEvent = {
+        ...existingEvent,
+        name: 'Updated Event',
+        description: 'Updated Description',
+        urgency: 'High',
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.event.findUnique.mockResolvedValue(existingEvent);
+      mockPrismaService.event.update.mockResolvedValue(updatedEvent);
+
+      const result = await service.updateEvent(eventId, updateEventDto);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Event updated successfully');
+      expect(result.data).toEqual(updatedEvent);
+      expect(mockPrismaService.event.findUnique).toHaveBeenCalledWith({
+        where: { id: eventId },
+      });
+      expect(mockPrismaService.event.update).toHaveBeenCalledWith({
+        where: { id: eventId },
+        data: {
+          name: updateEventDto.eventName,
+          description: updateEventDto.description,
+          urgency: updateEventDto.urgency,
+          updatedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('should throw error when event not found', async () => {
+      const eventId = 'non-existent-id';
+      const updateEventDto = {
+        eventName: 'Updated Event',
+      };
+
+      mockPrismaService.event.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateEvent(eventId, updateEventDto)).rejects.toThrow('Failed to update event: Event not found');
     });
   });
 });

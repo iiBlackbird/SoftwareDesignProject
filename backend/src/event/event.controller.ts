@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Body, Param, HttpStatus, HttpException } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, HttpStatus, HttpException } from '@nestjs/common';
 import { EventService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Controller('events')
 export class EventController {
@@ -64,6 +65,30 @@ export class EventController {
           statusCode,
           message: error.message,
           error: statusCode === HttpStatus.NOT_FOUND ? 'Not Found' : 'Internal Server Error',
+        },
+        statusCode,
+      );
+    }
+  }
+
+  @Put(':id')
+  async updateEvent(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
+    try {
+      const result = await this.eventService.updateEvent(id, updateEventDto);
+      return {
+        statusCode: HttpStatus.OK,
+        ...result,
+      };
+    } catch (error) {
+      const statusCode = error.message.includes('not found') 
+        ? HttpStatus.NOT_FOUND 
+        : HttpStatus.BAD_REQUEST;
+      
+      throw new HttpException(
+        {
+          statusCode,
+          message: error.message,
+          error: statusCode === HttpStatus.NOT_FOUND ? 'Not Found' : 'Bad Request',
         },
         statusCode,
       );

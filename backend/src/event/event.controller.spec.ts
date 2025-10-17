@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
 import { CreateEventDto, EventUrgency } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
 import { HttpStatus } from '@nestjs/common';
 
 describe('EventController', () => {
@@ -12,6 +13,7 @@ describe('EventController', () => {
     createEvent: jest.fn(),
     getAllEvents: jest.fn(),
     getEventById: jest.fn(),
+    updateEvent: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -57,6 +59,32 @@ describe('EventController', () => {
       expect(result.statusCode).toBe(HttpStatus.CREATED);
       expect(result.success).toBe(true);
       expect(mockEventService.createEvent).toHaveBeenCalledWith(createEventDto);
+    });
+  });
+
+  describe('updateEvent', () => {
+    it('should update an event successfully', async () => {
+      const eventId = '1';
+      const updateEventDto: UpdateEventDto = {
+        eventName: 'Updated Event',
+        description: 'Updated Description',
+        urgency: EventUrgency.HIGH,
+      };
+
+      const mockResult = {
+        success: true,
+        message: 'Event updated successfully',
+        data: { id: eventId, ...updateEventDto },
+      };
+
+      mockEventService.updateEvent.mockResolvedValue(mockResult);
+
+      const result = await controller.updateEvent(eventId, updateEventDto);
+
+      expect(result.statusCode).toBe(HttpStatus.OK);
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('Event updated successfully');
+      expect(mockEventService.updateEvent).toHaveBeenCalledWith(eventId, updateEventDto);
     });
   });
 });

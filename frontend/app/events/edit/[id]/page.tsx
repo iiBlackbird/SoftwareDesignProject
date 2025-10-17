@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import NavigationBar from '../../../components/NavigationBar';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import NavigationBar from '../../../../components/NavigationBar';
 
 const skillsList = [
   "Event Planning",
-  "Fundraising",
+  "Fundraising", 
   "First Aid",
   "Teaching",
   "Cooking",
@@ -20,9 +20,23 @@ const urgencies = ["Low", "Normal", "High", "Critical"] as const;
 
 type Urgency = (typeof urgencies)[number];
 
-export default function NewEventPage() {
+interface Event {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  requiredSkills: string[];
+  urgency: Urgency;
+  eventDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function EditEventPage() {
+  const params = useParams();
   const router = useRouter();
-  
+  const eventId = params.id as string;
+
   const [form, setForm] = useState({
     eventName: "",
     description: "",
@@ -32,8 +46,50 @@ export default function NewEventPage() {
     eventDate: "",
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch existing event data
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // TODO: Replace with actual API endpoint
+        const response = await fetch(`/api/events/${eventId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch event: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        const event: Event = result.data;
+        
+        // Convert eventDate to YYYY-MM-DD format for date input
+        const eventDate = new Date(event.eventDate).toISOString().split('T')[0];
+        
+        setForm({
+          eventName: event.name,
+          description: event.description,
+          location: event.location,
+          requiredSkills: event.requiredSkills,
+          urgency: event.urgency,
+          eventDate: eventDate,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load event');
+        console.error('Error fetching event:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (eventId) {
+      fetchEvent();
+    }
+  }, [eventId]);
 
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -51,11 +107,12 @@ export default function NewEventPage() {
     e.preventDefault();
     
     try {
-      setLoading(true);
+      setSaving(true);
       setError(null);
       
-      const response = await fetch('/api/events', {
-        method: 'POST',
+      // TODO: Replace with actual API endpoint
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -63,30 +120,69 @@ export default function NewEventPage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create event');
+        throw new Error(`Failed to update event: ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log("Event created successfully:", result);
+      console.log("Event updated successfully:", result);
       
-      // Redirect to events list or success page
+      // Redirect back to events list or event detail page
       router.push('/events');
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create event');
-      console.error('Error creating event:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update event');
+      console.error('Error updating event:', err);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  const onCancel = () => {
+    router.back();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 mt-8">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-3 text-gray-600 dark:text-gray-300">Loading event...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 mt-8">
+          <div className="text-center py-12">
+            <div className="text-red-600 dark:text-red-400 text-lg font-semibold mb-4">
+              Error Loading Event
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+            <button
+              onClick={() => router.back()}
+              className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavigationBar />
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 mt-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          Create Event
+          Edit Event
         </h1>
 
         {error && (
@@ -109,7 +205,7 @@ export default function NewEventPage() {
               maxLength={100}
               value={form.eventName}
               onChange={onChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="e.g., Community Park Clean-up"
             />
@@ -127,7 +223,7 @@ export default function NewEventPage() {
               rows={4}
               value={form.description}
               onChange={onChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Describe the event goals, tasks, schedule, etc."
             />
@@ -145,7 +241,7 @@ export default function NewEventPage() {
               rows={3}
               value={form.location}
               onChange={onChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Address, venue details, or meeting point"
             />
@@ -163,7 +259,7 @@ export default function NewEventPage() {
               required
               value={form.requiredSkills}
               onChange={onSkillsChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {skillsList.map((s) => (
@@ -185,7 +281,7 @@ export default function NewEventPage() {
               required
               value={form.urgency}
               onChange={onChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select urgency</option>
@@ -209,25 +305,33 @@ export default function NewEventPage() {
               required
               value={form.eventDate}
               onChange={onChange}
-              disabled={loading}
+              disabled={saving}
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
-          {/* Submit */}
-          <div className="pt-2">
+          {/* Submit and Cancel Buttons */}
+          <div className="pt-2 flex gap-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={saving}
+              className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg text-lg font-semibold transition-colors disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg text-lg font-semibold transition-colors disabled:cursor-not-allowed flex items-center justify-center"
+              disabled={saving}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg text-lg font-semibold transition-colors disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? (
+              {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
+                  Updating...
                 </>
               ) : (
-                'Save Event'
+                'Update Event'
               )}
             </button>
           </div>

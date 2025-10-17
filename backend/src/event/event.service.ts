@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventService {
@@ -66,6 +67,56 @@ export class EventService {
       };
     } catch (error) {
       throw new Error(`Failed to fetch event: ${error.message}`);
+    }
+  }
+
+  async updateEvent(id: string, updateEventDto: UpdateEventDto) {
+    try {
+      // First check if the event exists
+      const existingEvent = await this.prisma.event.findUnique({
+        where: { id },
+      });
+
+      if (!existingEvent) {
+        throw new Error('Event not found');
+      }
+
+      // Prepare update data, only including fields that were provided
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+
+      if (updateEventDto.eventName !== undefined) {
+        updateData.name = updateEventDto.eventName;
+      }
+      if (updateEventDto.description !== undefined) {
+        updateData.description = updateEventDto.description;
+      }
+      if (updateEventDto.location !== undefined) {
+        updateData.location = updateEventDto.location;
+      }
+      if (updateEventDto.requiredSkills !== undefined) {
+        updateData.requiredSkills = updateEventDto.requiredSkills;
+      }
+      if (updateEventDto.urgency !== undefined) {
+        updateData.urgency = updateEventDto.urgency;
+      }
+      if (updateEventDto.eventDate !== undefined) {
+        updateData.eventDate = new Date(updateEventDto.eventDate);
+      }
+
+      const updatedEvent = await this.prisma.event.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return {
+        success: true,
+        message: 'Event updated successfully',
+        data: updatedEvent,
+      };
+    } catch (error) {
+      throw new Error(`Failed to update event: ${error.message}`);
     }
   }
 }
