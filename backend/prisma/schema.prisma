@@ -33,16 +33,18 @@ model User {
   emailVerificationTokenExpires DateTime?
 }
 
-// EventDetails table 
-// model EventDetails {
-//  id           Int @id @default(autoincrement())
-//  eventName    String
-//  eventDesc    String
-//  location     String
-//  Skills       String[]
-//  Urgency      String
-//  EventDate    DateTime  
-// }
+// Event table 
+model Event {
+  id           String @id @default(cuid())
+  name         String
+  description  String
+  location     String
+  requiredSkills String[]
+  urgency      String
+  eventDate    DateTime  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
 
 // VolunteerHistory table - will implement later 
 // model VolunteerHistory {
