@@ -28,8 +28,8 @@ interface VolunteerHistory {
 @Injectable()
 export class AdminVolunteerMatchingService {
   private users: UserProfile[] = [
-    { id: 1, name: 'John Smith', skills: ['First Aid', 'Teamwork'], availability: ['Mon', 'Wed'], location: 'City Center' },
-    { id: 2, name: 'Karen John', skills: ['Cooking', 'Organization'], availability: ['Tue', 'Thu'], location: 'Suburbs' },
+    { id: 1, name: 'John Smith', skills: ['First Aid', 'Teamwork'], availability: ['2025-10-20', '2025-10-22'], location: 'City Center' },
+    { id: 2, name: 'Karen John', skills: ['Cooking', 'Organization'], availability: ['2025-11-15'], location: 'Suburbs' },
   ];
 
   private events: EventDetails[] = [
@@ -42,14 +42,19 @@ export class AdminVolunteerMatchingService {
 
   private calculateMatchPoints(user: UserProfile, event: EventDetails): number {
     let points = 0;
+
     const skillMatches = event.requiredSkills.filter(skill => user.skills.includes(skill));
     points += skillMatches.length * 5;
 
     // Availability match (mock)
-    points += 3;
+    if (user.availability.includes(event.date)) {
+        points += 3; // points if the user is available on that date
+    }
 
     // Location proximity
-    if (user.location === event.location) points += 2;
+    //if (user.location === event.location) points += 2;
+    if (user.location && event.location && user.location === event.location) points += 2;
+
 
     // Urgency
     if (event.urgency === 'High') points += 1;
