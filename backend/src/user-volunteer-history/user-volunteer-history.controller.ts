@@ -5,12 +5,12 @@ import type { Request } from 'express';
 
 @Controller('user/volunteer-history')
 export class UserVolunteerHistoryController {
-  constructor(private readonly historyService: UserVolunteerHistoryService) {}
+    constructor(private readonly historyService: UserVolunteerHistoryService) {}
 
-  @Get()
-  getUserHistory(@Req() req: Request) {
-    // hardcoded userId = 1 
-    const userId = 1;
-    return this.historyService.getUserHistory(userId);
-  }
+    @Get()
+    getUserHistory(@Req() req: Request) {
+        // hardcoded userId = 1 
+        const userId = 1;
+        return this.historyService.getUserHistory(userId);
+    }
 }

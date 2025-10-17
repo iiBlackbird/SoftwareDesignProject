@@ -4,17 +4,17 @@ import { SuggestedMatchDto, AssignVolunteerResponseDto } from './dto';
 
 @Controller('admin/volunteer-matching')
 export class AdminVolunteerMatchingController {
-  constructor(private readonly matchingService: AdminVolunteerMatchingService) {}
+    constructor(private readonly matchingService: AdminVolunteerMatchingService) {}
 
-  @Get()
-  getMatches(): SuggestedMatchDto[] {
-    return this.matchingService.getSuggestedMatches();
-  }
+    @Get()
+    getMatches(): SuggestedMatchDto[] {
+        return this.matchingService.getSuggestedMatches();
+    }
 
-  @Post('assign')
-  assignVolunteer(
-    @Body() body: { volunteerId: number; eventId: number },
-  ): AssignVolunteerResponseDto {
-    return this.matchingService.assignVolunteerToEvent(body.volunteerId, body.eventId);
-  }
+    @Post('assign')
+    assignVolunteer(
+        @Body() body: { volunteerId: number; eventId: number },
+    ): AssignVolunteerResponseDto {
+        return this.matchingService.assignVolunteerToEvent(body.volunteerId, body.eventId);
+    }
 }

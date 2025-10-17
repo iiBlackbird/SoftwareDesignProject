@@ -31,3 +31,26 @@ model User {
   emailVerified Boolean @default(false)
   verificationToken String? @unique
 }
+
+// EventDetails table 
+// model EventDetails {
+//  id           Int @id @default(autoincrement())
+//  eventName    String
+//  eventDesc    String
+//  location     String
+//  Skills       String[]
+//  Urgency      String
+//  EventDate    DateTime  
+// }
+
+// VolunteerHistory table - will implement later 
+// model VolunteerHistory {
+//  id           Int @id @default(autoincrement())
+//  userId       String       // foreign key to UserProfile.id
+//  eventId      String       // foreign key to EventDetails.id
+//  status       String     // 'assigned', 'enrolled', 'completed'
+//  user         UserProfile  @relation(fields: [userId], references: [id])
+//  event        EventDetails @relation(fields: [eventId], references: [id])
+//  createdAt    DateTime @default(now())
+//  updatedAt    DateTime @updatedAt 
+// }

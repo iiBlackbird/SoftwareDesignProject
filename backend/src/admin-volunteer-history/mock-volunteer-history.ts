@@ -1,7 +1,7 @@
 export const volunteerHistory = [
     {
       id: 1,
-      volunteerName: "John Sith",
+      volunteerName: "John Smith",
       eventName: "Blood Drive",
       eventDescription: "First Aid Event",
       location: "Red Cross",

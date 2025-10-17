@@ -1,4 +1,3 @@
-import { availableMemory } from "process";
 import { AdminVolunteerMatchingService } from "./admin-volunteer-matching.service";
 
 describe('AdminVolunteerMatchingService', () => {
@@ -106,5 +105,73 @@ describe('AdminVolunteerMatchingService', () => {
         const matches = service.getSuggestedMatches();
         expect(matches[0].suggestedEvent).toBe('No suitable match');
         expect(matches[0].suggestedEventId).toBeNull();
+    });   
+
+    it('should select event with higher urgency when points tie', () => {
+        const user: any = {
+          id: 5,
+          name: 'Diana',
+          skills: ['First Aid'],
+          availability: ['2025-10-20', '2025-10-21'],
+          location: 'City Center',
+        };
+      
+        const event1: any = {
+          eventId: 1,
+          eventName: 'Event A',
+          requiredSkills: ['First Aid'],
+          date: '2025-10-20',
+          location: 'City Center',
+          urgency: 'Medium',
+        };
+      
+        const event2: any = {
+          eventId: 2,
+          eventName: 'Event B',
+          requiredSkills: ['First Aid'],
+          date: '2025-10-21',
+          location: 'City Center',
+          urgency: 'High', 
+        };
+      
+        (service as any).users = [user];
+        (service as any).events = [event1, event2];
+      
+        const matches = service.getSuggestedMatches();
+        expect(matches[0].suggestedEvent).toBe('Event B'); 
+    });
+
+    it('should select event with earlier date when points and urgency tie', () => {
+        const user: any = {
+          id: 6,
+          name: 'Ethan',
+          skills: ['First Aid'],
+          availability: ['2025-10-20', '2025-10-21'],
+          location: 'City Center',
+        };
+      
+        const event1: any = {
+          eventId: 3,
+          eventName: 'Event C',
+          requiredSkills: ['First Aid'],
+          date: '2025-10-22', 
+          location: 'City Center',
+          urgency: 'High',
+        };
+      
+        const event2: any = {
+          eventId: 4,
+          eventName: 'Event D',
+          requiredSkills: ['First Aid'],
+          date: '2025-10-20', 
+          location: 'City Center',
+          urgency: 'High',
+        };
+      
+        (service as any).users = [user];
+        (service as any).events = [event1, event2];
+      
+        const matches = service.getSuggestedMatches();
+        expect(matches[0].suggestedEvent).toBe('Event D'); 
     }); 
 });

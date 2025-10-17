@@ -3,7 +3,7 @@ import { AdminVolunteerMatchingService } from './admin-volunteer-matching.servic
 import { AdminVolunteerMatchingController } from './admin-volunteer-matching.controller';
 
 @Module({
-  controllers: [AdminVolunteerMatchingController],
-  providers: [AdminVolunteerMatchingService],
+    controllers: [AdminVolunteerMatchingController],
+    providers: [AdminVolunteerMatchingService],
 })
 export class AdminVolunteerMatchingModule {}

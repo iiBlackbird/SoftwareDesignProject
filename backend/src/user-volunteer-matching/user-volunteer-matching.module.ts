@@ -3,7 +3,7 @@ import { UserVolunteerMatchingController } from './user-volunteer-matching.contr
 import { UserVolunteerMatchingService } from './user-volunteer-matching.service';
 
 @Module({
-  controllers: [UserVolunteerMatchingController],
-  providers: [UserVolunteerMatchingService],
-})
+    controllers: [UserVolunteerMatchingController],
+    providers: [UserVolunteerMatchingService],
+    })
 export class UserVolunteerMatchingModule {}
