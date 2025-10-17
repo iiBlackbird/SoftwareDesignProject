@@ -30,6 +30,7 @@ model User {
 
   emailVerified Boolean @default(false)
   verificationToken String? @unique
+  emailVerificationTokenExpires DateTime?
 }
 
 // EventDetails table 

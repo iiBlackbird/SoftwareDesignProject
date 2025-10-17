@@ -35,3 +35,15 @@ export const signIn = async (email, password) => {
 
   return res.json();
 };
+
+export const verifyEmail = async (token) => {
+  const res = await fetch(`${API_URL}/auth/verify-email?token=${token}`);
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to verify email');
+  }
+
+  return data;
+};

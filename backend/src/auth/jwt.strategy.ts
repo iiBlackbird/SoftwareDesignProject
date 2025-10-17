@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,11 +15,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: { sub: string; email: string }) {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-    // This attaches the user object to the request (req.user)
-    // You can then access it in your controllers via @Req() req
+
     if (!user) {
       return null;
     }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
     return result;

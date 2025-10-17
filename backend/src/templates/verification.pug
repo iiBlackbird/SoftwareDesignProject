@@ -1,0 +1,13 @@
+doctype html
+html
+  head
+    meta(name='viewport', content='width=device-width')
+    meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
+    title Simple Transactional Email
+    style
+      include ./style.css
+  body
+    p Hi #{name},
+    p Welcome to our app! Please verify your email address by clicking the link below.
+    a(href=url) Verify Email
+    p If you did not request this email, please ignore it.
