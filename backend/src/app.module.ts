@@ -10,6 +10,7 @@ import { VolunteerHistoryModule } from './admin-volunteer-history/volunteer-hist
 import { UserVolunteerHistoryModule } from './user-volunteer-history/user-volunteer-history.module';
 import { UserVolunteerMatchingModule } from './user-volunteer-matching/user-volunteer-matching.module';
 import { AdminVolunteerMatchingModule } from './admin-volunteer-matching/admin-volunteer-matching.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AdminVolunteerMatchingModule } from './admin-volunteer-matching/admin-v
     UserVolunteerHistoryModule,
     UserVolunteerMatchingModule,
     AdminVolunteerMatchingModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

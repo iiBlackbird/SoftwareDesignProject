@@ -254,7 +254,7 @@ function FilterSidebar({
         <h3 className="text-lg font-medium text-gray-900 dark:text-white">Filters</h3>
         {usingFallback && (
           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-            Offline Mode
+            Offline
           </span>
         )}
       </div>
