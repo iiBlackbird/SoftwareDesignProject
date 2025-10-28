@@ -31,6 +31,28 @@ model User {
   emailVerified Boolean @default(false)
   verificationToken String? @unique
   emailVerificationTokenExpires DateTime?
+
+  profile     UserProfile? // 1 user - 1 profile
+  volunteerHistories VolunteerHistory[] // 1 user - many volunteer history records
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique // foreign key
+  fullName    String   @db.VarChar(50)
+  address1    String   @db.VarChar(100)
+  address2    String?  @db.VarChar(100)
+  city        String   @db.VarChar(100)
+  state       String   @db.Char(2)
+  zipcode     String   @db.VarChar(9)
+  skills      String[] // Multi-select dropdown 
+  preferences String?  // optional text area
+  availability DateTime[] // multiple date selections allowed
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 // Event table 
@@ -44,16 +66,20 @@ model Event {
   eventDate    DateTime  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  volunteerHistories VolunteerHistory[]
 }
 
 // VolunteerHistory table - will implement later 
-// model VolunteerHistory {
-//  id           Int @id @default(autoincrement())
-//  userId       String       // foreign key to UserProfile.id
-//  eventId      String       // foreign key to EventDetails.id
-//  status       String     // 'assigned', 'enrolled', 'completed'
-//  user         UserProfile  @relation(fields: [userId], references: [id])
-//  event        EventDetails @relation(fields: [eventId], references: [id])
-//  createdAt    DateTime @default(now())
-//  updatedAt    DateTime @updatedAt 
-// }
+model VolunteerHistory {
+  id         String   @id @default(cuid())
+  userId     String   // foreign key to User.id
+  eventId    String   // foreign key to Event.id
+  status     String   // 'enrolled', 'assigned', 'completed'
+
+  user       User     @relation(fields: [userId], references: [id])
+  event      Event    @relation(fields: [eventId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
