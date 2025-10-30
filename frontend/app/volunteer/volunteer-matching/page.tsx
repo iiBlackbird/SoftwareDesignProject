@@ -4,40 +4,66 @@ import { useEffect, useState } from "react";
 import NavigationBar from "../../../components/NavigationBar";
 
 type Match = {
-  eventId: number;
+  eventId: string;
   eventName: string;
   description: string;
   location: string;
+  requiredSkills: string[];
+  urgency: string;
   eventDate: string;
   status: string;
 };
 
 export default function VolunteerMatchingPage() {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [enrolled, setEnrolled] = useState<{ [id: number]: boolean }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // fetch matched volunteer opportunities from backend
+  // Replace this with the logged-in user's ID when auth is implemented
+  const userId = "cmhb3tn6p0001oyavggikf139"; 
+
+  //  Fetch matched events from backend
   useEffect(() => {
-    fetch("http://localhost:3000/user/volunteer-matching")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch matches");
-        }
-        return res.json();
-      })
-      .then((data) => {
+    async function fetchMatches() {
+      try {
+        const res = await fetch(
+          `http://localhost:3000/user/volunteer-matching?userId=${userId}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch matches");
+        const data: Match[] = await res.json();
         setMatches(data);
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Error fetching matches:", err);
         setError("Failed to load matched opportunities.");
+      } finally {
         setLoading(false);
-      });
-  }, []);
+      }
+    }
 
+    fetchMatches();
+  }, [userId]);
+
+  //  Handle enrollment
+  async function handleEnroll(eventId: string) {
+    try {
+      const res = await fetch("http://localhost:3000/user/volunteer-matching/enroll", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, eventId }),
+      });
+
+      if (!res.ok) throw new Error("Failed to enroll in event");
+
+
+      // Remove enrolled event from matches list
+      setMatches((prev) => prev.filter((m) => m.eventId !== eventId));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to enroll in event. Please try again.");
+    }
+  }
+
+  // Render UI
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavigationBar />
@@ -107,20 +133,12 @@ export default function VolunteerMatchingPage() {
                       {m.eventDate}
                     </td>
                     <td className="py-3 px-4">
-                      {enrolled[m.eventId] ? (
-                        <span className="font-medium text-green-600 dark:text-green-400">
-                          Enrolled
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            setEnrolled((prev) => ({ ...prev, [m.eventId]: true }))
-                          }
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                          Enroll
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleEnroll(m.eventId)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Enroll
+                      </button>
                     </td>
                   </tr>
                 ))}

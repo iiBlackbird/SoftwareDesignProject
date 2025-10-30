@@ -3,24 +3,40 @@
 import { useEffect, useState } from "react";
 import NavigationBar from '../../../components/NavigationBar';
 
+// Type for volunteer history record from Prisma
 type VolunteerRecord = {
-  id: number;
-  eventName: string;
-  eventDescription: string;
-  location: string;
-  requiredSkills: string[];
-  urgency: string;
-  eventDate: string;
-  participationStatus: string;
+  id: string;
+  status: string; // participationStatus
+  event: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    requiredSkills: string[];
+    urgency: string;
+    eventDate: string; // converted to string for display
+  };
 };
 
 export default function UserVolunteerHistory() {
   const [history, setHistory] = useState<VolunteerRecord[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/user/volunteer-history")
+    // Fetch volunteer history for a given userId (hardcoded here, can be dynamic)
+    fetch("http://localhost:3000/user/volunteer-history?userId=cmhb3tn6p0001oyavggikf139")
       .then((res) => res.json())
-      .then((data) => setHistory(data))
+      .then((data) =>
+        setHistory(
+          data.map((item: any) => ({
+            ...item,
+            event: {
+              ...item.event,
+              // Convert eventDate (Date) to a readable string
+              eventDate: new Date(item.event.eventDate).toLocaleDateString(),
+            },
+          }))
+        )
+      )
       .catch((err) => console.error("Error fetching data:", err));
   }, []);
 
@@ -75,25 +91,25 @@ export default function UserVolunteerHistory() {
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                    {record.eventName}
+                    {record.event.name}
                   </td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.eventDescription}
+                    {record.event.description}
                   </td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.location}
+                    {record.event.location}
                   </td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.requiredSkills.join(", ")}
+                    {record.event.requiredSkills.join(", ")}
                   </td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.urgency}
+                    {record.event.urgency}
                   </td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.eventDate}
+                    {record.event.eventDate}
                   </td>
                   <td className="py-3 px-4 font-medium text-green-600 dark:text-green-400">
-                    {record.participationStatus}
+                    {record.status}
                   </td>
                 </tr>
               ))}
