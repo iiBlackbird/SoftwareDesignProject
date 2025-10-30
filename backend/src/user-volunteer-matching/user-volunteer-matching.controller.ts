@@ -1,21 +1,23 @@
-import { Controller, Get, Patch, Query, Body, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Req, UseGuards } from '@nestjs/common';
 import { UserVolunteerMatchingService } from './user-volunteer-matching.service';
-import { GetUserMatchesDto } from './dto/get-user-matches.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('user/volunteer-matching')
 export class UserVolunteerMatchingController {
   constructor(private readonly matchingService: UserVolunteerMatchingService) {}
 
-  // GET /user/volunteer-matching?userId=123
+  @UseGuards(JwtAuthGuard)
   @Get()
-  async getMatchedEvents(@Query('userId') userId: string) {
+  async getMatchedEvents(@Req() req: any) {
+    const userId = req.user.id; // from JWT
     return this.matchingService.getMatchedEventsForUser(userId);
   }
 
-  // PATCH /user/volunteer-matching/enroll
-  // body: { userId: "123", eventId: "abc" }
+  @UseGuards(JwtAuthGuard)
   @Patch('enroll')
-  async enrollInEvent(@Body() body: { userId: string; eventId: string }) {
-    return this.matchingService.enrollInEvent(body.userId, body.eventId);
+  async enrollInEvent(@Req() req: any, @Body() body: { eventId: string }) {
+    const userId = req.user.id; // from JWT
+    return this.matchingService.enrollInEvent(userId, body.eventId);
   }
 }
+

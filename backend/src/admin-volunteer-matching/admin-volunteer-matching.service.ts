@@ -33,12 +33,29 @@ export class AdminVolunteerMatchingService {
       });
     if (userAvailable) points += 3;
     // Location match (trimmed, case-insensitive)
-    if (
-      user.location &&
-      event.location &&
-      user.location.trim().toLowerCase() === event.location.trim().toLowerCase()
-    )
-      points += 2;
+    // Location matching logic 
+    const eventLoc = event.location?.toLowerCase() || '';
+    const city = user.city?.toLowerCase() || '';
+    const state = user.state?.toLowerCase() || '';
+    const zip = user.zipcode?.slice(0, 5)?.toLowerCase() || '';
+
+    if (eventLoc.includes('online') || eventLoc.includes('virtual')) {
+        // Universal events count for everyone
+        points += 2;
+    } else {
+        // Case 1: both city and state appear - strong match
+        if (eventLoc.includes(city) && eventLoc.includes(state)) {
+        points += 2;
+        }
+        // Case 2: only city or state appears - partial match
+        else if (eventLoc.includes(city) || eventLoc.includes(state)) {
+        points += 1;
+        }
+        // Case 3: ZIP code appears in text 
+        else if (zip && eventLoc.includes(zip)) {
+        points += 1;
+        }
+    }
 
     // Urgency
     if (event.urgency.toLowerCase() === 'high') points += 1;
@@ -62,6 +79,14 @@ export class AdminVolunteerMatchingService {
     const matches: SuggestedMatchDto[] = [];
 
     for (const user of users) {
+      // Skip if user already matched or enrolled in any event
+      const userAlreadyAssigned = volunteerHistory.some(
+        (vh) =>
+            vh.userId === user.userId &&
+            ['Matched', 'Enrolled'].includes(vh.status)
+      );
+      if (userAlreadyAssigned) continue; // skip showing this user again
+
       let bestMatch: any = null;
       let maxPoints = -1;
 
@@ -123,7 +148,7 @@ export class AdminVolunteerMatchingService {
       data: {
         userId: volunteerId,
         eventId,
-        status: 'assigned',
+        status: 'Matched',
       },
     });
 

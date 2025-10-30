@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { VolunteerHistoryController } from './volunteer-history.controller';
 import { VolunteerHistoryService } from './volunteer-history.service';
+import { GetVolunteerHistoryDto } from './dto/get-volunteer-history.dto';
 
 describe('VolunteerHistoryController', () => {
   let controller: VolunteerHistoryController;
@@ -84,5 +85,15 @@ describe('VolunteerHistoryController', () => {
     const name = 'No Name';
     const result = await controller.getByVolunteer(name);
     expect(result).toEqual([]);
+  });
+
+  it('getByVolunteer should use GetVolunteerHistoryDto', async () => {
+    const dto = new GetVolunteerHistoryDto();
+    dto.name = 'John Smith'; 
+  
+    const result = await controller.getByVolunteer(dto.name);
+  
+    expect(result.every((r) => r.volunteerName === dto.name)).toBe(true);
+    expect(service.findByVolunteer).toHaveBeenCalledWith(dto.name);
   });
 });

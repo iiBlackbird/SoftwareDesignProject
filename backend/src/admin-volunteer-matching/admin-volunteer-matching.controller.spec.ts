@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminVolunteerMatchingController } from './admin-volunteer-matching.controller';
 import { AdminVolunteerMatchingService } from './admin-volunteer-matching.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SuggestedMatchDto } from './dto/suggested-match.dto';
+import { AssignVolunteerResponseDto } from './dto/assign-volunteer-response.dto';
+import { AssignVolunteerDto } from './dto/assign-volunteer.dto';
 
 describe('AdminVolunteerMatchingController', () => {
   let controller: AdminVolunteerMatchingController;
@@ -37,15 +40,13 @@ describe('AdminVolunteerMatchingController', () => {
   });
 
   it('should return suggested matches', async () => {
-    const mockMatches = [
-      {
-        volunteerId: '1',
-        volunteerName: 'John Smith',
-        suggestedEvent: 'Beach Cleanup',
-        suggestedEventId: '10',
-      },
-    ];
+    const dto = new SuggestedMatchDto();
+    dto.volunteerId = '1';
+    dto.volunteerName = 'John Smith';
+    dto.suggestedEvent = 'Beach Cleanup';
+    dto.suggestedEventId = '10';
 
+    const mockMatches = [dto];
     mockMatchingService.getSuggestedMatches.mockResolvedValue(mockMatches);
 
     const result = await controller.getMatches();
@@ -70,20 +71,22 @@ describe('AdminVolunteerMatchingController', () => {
     expect(result).toEqual(mockEvents);
   });
 
-  it('should assign a volunteer to an event', async () => {
-    const mockBody = { volunteerId: 'v1', eventId: 'e1' };
-    const mockResponse = {
-      message: 'Volunteer assigned successfully.',
-      record: { id: '123', userId: 'v1', eventId: 'e1', status: 'assigned' },
-    };
+  it('should assign a volunteer to an event using DTOs', async () => {
+    const assignDto = new AssignVolunteerDto();
+    assignDto.volunteerId = 'v1';
+    assignDto.eventId = 'e1';
 
-    mockMatchingService.assignVolunteerToEvent.mockResolvedValue(mockResponse);
+    const responseDto = new AssignVolunteerResponseDto();
+    responseDto.message = 'Volunteer assigned successfully.';
+    responseDto.record = { id: '123', userId: 'v1', eventId: 'e1', status: 'assigned' };
 
-    const result = await controller.assignVolunteer(mockBody);
+    mockMatchingService.assignVolunteerToEvent.mockResolvedValue(responseDto);
+
+    const result = await controller.assignVolunteer(assignDto);
 
     expect(service.assignVolunteerToEvent).toHaveBeenCalledTimes(1);
     expect(service.assignVolunteerToEvent).toHaveBeenCalledWith('v1', 'e1');
-    expect(result).toEqual(mockResponse);
+    expect(result).toEqual(responseDto);
   });
 
   it('should propagate errors from the service', async () => {
@@ -94,3 +97,5 @@ describe('AdminVolunteerMatchingController', () => {
     await expect(controller.getMatches()).rejects.toThrow('Database connection failed');
   });
 });
+
+

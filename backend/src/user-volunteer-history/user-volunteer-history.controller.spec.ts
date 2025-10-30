@@ -33,16 +33,38 @@ describe('UserVolunteerHistoryController', () => {
   });
 
   it('should throw BadRequestException if userId is missing', async () => {
-    const query = new GetUserHistoryDto();
-    query.userId = undefined as any;
-
-    await expect(controller.getUserHistory(query)).rejects.toThrow(BadRequestException);
-    await expect(controller.getUserHistory(query)).rejects.toThrow('userId is required');
+    const req = { user: undefined }; // simulate missing user
+  
+    await expect(controller.getUserHistory(req as any)).rejects.toThrow(BadRequestException);
+    await expect(controller.getUserHistory(req as any)).rejects.toThrow('userId is required');
+  });
+  
+  it('should call historyService.getUserHistory with correct userId', async () => {
+    const req = { user: { id: 'user123' } }; // simulate authenticated user
+  
+    const mockResponse = [
+      {
+        id: '1',
+        userId: 'user123',
+        eventId: 'event1',
+        event: { id: 'event1', name: 'Community Cleanup' },
+      },
+    ];
+  
+    mockUserVolunteerHistoryService.getUserHistory.mockResolvedValue(mockResponse);
+  
+    const result = await controller.getUserHistory(req as any);
+  
+    expect(service.getUserHistory).toHaveBeenCalledTimes(1);
+    expect(service.getUserHistory).toHaveBeenCalledWith('user123');
+    expect(result).toEqual(mockResponse);
   });
 
-  it('should call historyService.getUserHistory with correct userId', async () => {
-    const query = new GetUserHistoryDto();
-    query.userId = 'user123';
+  it('should call historyService.getUserHistory using GetUserHistoryDto', async () => {
+    const dto = new GetUserHistoryDto();
+    dto.userId = 'user123';
+
+    const req = { user: { id: dto.userId } } as any;
 
     const mockResponse = [
       {
@@ -53,36 +75,37 @@ describe('UserVolunteerHistoryController', () => {
       },
     ];
 
-    mockUserVolunteerHistoryService.getUserHistory.mockResolvedValue(mockResponse);
+    jest
+      .spyOn(service, 'getUserHistory')
+      .mockResolvedValue(mockResponse);
 
-    const result = await controller.getUserHistory(query);
-
-    expect(service.getUserHistory).toHaveBeenCalledTimes(1);
-    expect(service.getUserHistory).toHaveBeenCalledWith('user123');
+    const result = await controller.getUserHistory(req);
+    
+    expect(service.getUserHistory).toHaveBeenCalledWith(dto.userId);
     expect(result).toEqual(mockResponse);
   });
 
+  
+
   it('should return an empty array if service returns no history', async () => {
-    const query = new GetUserHistoryDto();
-    query.userId = 'emptyUser';
+    const req = { user: { id: 'emptyUser' } };    
 
     mockUserVolunteerHistoryService.getUserHistory.mockResolvedValue([]);
 
-    const result = await controller.getUserHistory(query);
+    const result = await controller.getUserHistory(req as any);
 
     expect(service.getUserHistory).toHaveBeenCalledWith('emptyUser');
     expect(result).toEqual([]);
   });
 
   it('should propagate errors thrown by the service', async () => {
-    const query = new GetUserHistoryDto();
-    query.userId = 'errorUser';
+    const req = { user: { id: 'errorUser' } };
 
     mockUserVolunteerHistoryService.getUserHistory.mockRejectedValue(
       new Error('Database failure'),
     );
 
-    await expect(controller.getUserHistory(query)).rejects.toThrow('Database failure');
+    await expect(controller.getUserHistory(req as any)).rejects.toThrow('Database failure');
   });
 });
 

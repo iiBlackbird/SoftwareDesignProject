@@ -1,6 +1,7 @@
 import { UserVolunteerMatchingController } from './user-volunteer-matching.controller';
 import { UserVolunteerMatchingService } from './user-volunteer-matching.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { GetUserMatchesDto } from './dto/get-user-matches.dto';
 
 describe('UserVolunteerMatchingController', () => {
   let controller: UserVolunteerMatchingController;
@@ -8,7 +9,7 @@ describe('UserVolunteerMatchingController', () => {
   let prisma: jest.Mocked<PrismaService>;
 
   beforeEach(() => {
-    //  create a mock Prisma service so constructor dependency works
+    // mock Prisma service
     prisma = {
       volunteerHistory: {
         findMany: jest.fn(),
@@ -27,7 +28,8 @@ describe('UserVolunteerMatchingController', () => {
 
   it('should call getMatchedEventsForUser from service', async () => {
     const spy = jest.spyOn(service, 'getMatchedEventsForUser').mockResolvedValue([]);
-    await controller.getMatchedEvents('123');
+    const mockReq = { user: { id: '123' } } as any;
+    await controller.getMatchedEvents(mockReq);
     expect(spy).toHaveBeenCalledWith('123');
   });
 
@@ -46,16 +48,32 @@ describe('UserVolunteerMatchingController', () => {
     ];
     jest.spyOn(service, 'getMatchedEventsForUser').mockResolvedValue(mockMatches);
 
-    const result = await controller.getMatchedEvents('123');
+    const mockReq = { user: { id: '123' } } as any;
+    const result = await controller.getMatchedEvents(mockReq);
     expect(result).toEqual(mockMatches);
   });
 
   it('should call enrollInEvent from service', async () => {
     const spy = jest.spyOn(service, 'enrollInEvent').mockResolvedValue({ success: true });
-    const body = { userId: '123', eventId: 'abc' };
+    const mockReq = { user: { id: '123' } } as any;
+    const body = { eventId: 'abc' };
 
-    const result = await controller.enrollInEvent(body);
+    const result = await controller.enrollInEvent(mockReq, body);
     expect(spy).toHaveBeenCalledWith('123', 'abc');
     expect(result).toEqual({ success: true });
+  });
+
+  it('should call getMatchedEventsForUser using GetUserMatchesDto', async () => {
+    const dto = new GetUserMatchesDto();
+    dto.userId = '123'; 
+  
+    const spy = jest
+      .spyOn(service, 'getMatchedEventsForUser')
+      .mockResolvedValue([]);
+
+    const mockReq = { user: { id: dto.userId } } as any;
+    await controller.getMatchedEvents(mockReq);
+  
+    expect(spy).toHaveBeenCalledWith(dto.userId);
   });
 });

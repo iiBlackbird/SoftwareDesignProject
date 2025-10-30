@@ -13,7 +13,6 @@ export class AdminVolunteerMatchingController {
     return await this.matchingService.getSuggestedMatches();
   }
 
-  // ADD THIS ENDPOINT
   @Get('events')
   async getEvents() {
     return await this.matchingService.getAllEvents();

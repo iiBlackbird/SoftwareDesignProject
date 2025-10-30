@@ -1,23 +1,20 @@
-import { Controller, Get, Query, ValidationPipe, BadRequestException } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { UserVolunteerHistoryService } from './user-volunteer-history.service';
-import { GetUserHistoryDto } from './dto/get-user-history.dto';
 
 @Controller('user/volunteer-history')
 export class UserVolunteerHistoryController {
   constructor(private readonly historyService: UserVolunteerHistoryService) {}
 
+  @UseGuards(AuthGuard('jwt')) // use JWT guard
   @Get()
-  async getUserHistory(
-    @Query(new ValidationPipe({ transform: true }))
-    query: GetUserHistoryDto,
-  ) {
-    const userId = query.userId;
-    if (!userId) {
+  async getUserHistory(@Req() req: any) {
+    if (!req.user || !req.user.id) {
       throw new BadRequestException('userId is required');
     }
-    return await this.historyService.getUserHistory(userId); 
+    const userId = req.user.id; // comes from JwtStrategy validate()
+    return await this.historyService.getUserHistory(userId);
   }
-
-
 }
+
 
