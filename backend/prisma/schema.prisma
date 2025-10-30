@@ -82,3 +82,17 @@ model VolunteerHistory {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+// US States table
+model State {
+  id           String @id @default(cuid())
+  name         String @unique // Full state name (e.g., "California")
+  abbreviation String @unique @db.Char(2) // Two-letter abbreviation (e.g., "CA")
+  capital      String // State capital city
+  region       String // Geographic region (e.g., "West", "South", etc.)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("states")
+}
