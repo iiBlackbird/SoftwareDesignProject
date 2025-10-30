@@ -1,133 +1,135 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { SuggestedMatchDto } from './dto/suggested-match.dto';
 import { AssignVolunteerResponseDto } from './dto/assign-volunteer-response.dto';
-
-interface UserProfile {
-  id: number;
-  name: string;
-  skills: string[];
-  availability: string[];
-  location: string;
-}
-
-interface EventDetails {
-  eventId: number;
-  eventName: string;
-  requiredSkills: string[];
-  date: string;
-  location: string;
-  urgency: 'Low' | 'Medium' | 'High';
-}
-
-interface VolunteerHistory {
-  id: number;
-  userId: number;
-  eventId: number;
-  status: string; // 'assigned', 'enrolled', 'completed'
-}
+import { Prisma } from 'generated/prisma';
 
 @Injectable()
 export class AdminVolunteerMatchingService {
-    private users: UserProfile[] = [
-        { id: 1, name: 'John Smith', skills: ['First Aid', 'Teamwork'], availability: ['2025-10-20', '2025-10-22'], location: 'City Center' },
-        { id: 2, name: 'Karen John', skills: ['Cooking', 'Organization'], availability: ['2025-11-15'], location: 'Suburbs' },
-    ];
+  constructor(private prisma: PrismaService) {}
 
-    private events: EventDetails[] = [
-        { eventId: 1, eventName: 'Blood Drive', requiredSkills: ['First Aid', 'Organization'], date: '2025-10-20', location: 'City Center', urgency: 'High' },
-        { eventId: 2, eventName: 'Meal Kit Assembly', requiredSkills: ['Cooking', 'Teamwork'], date: '2025-11-15', location: 'Community Center', urgency: 'Medium' },
-        { eventId: 3, eventName: 'Park Cleanup', requiredSkills: ['Cleaning', 'Teamwork'], date: '2025-10-22', location: 'Central Park', urgency: 'Low' },
-    ];
+  async getAllEvents() {
+    const events = await this.prisma.event.findMany({
+      where: { eventDate: { gte: new Date() } },
+      select: { id: true, name: true }
+    });
+    return { events };
+  }
 
-    private volunteerHistory: VolunteerHistory[] = [];
 
-    private calculateMatchPoints(user: UserProfile, event: EventDetails): number {
-        let points = 0;
+  // Calculate match points between a user and an event
+  private calculateMatchPoints(user: any, event: any): number {
+    let points = 0;
 
-        const skillMatches = event.requiredSkills.filter(skill => user.skills.includes(skill));
-        points += skillMatches.length * 5;
+    // Skills match (case-insensitive)
+    const skillMatches = event.requiredSkills.filter((skill: string) =>
+      user.skills.some((userSkill: string) => userSkill.toLowerCase() === skill.toLowerCase()),
+    );
+    points += skillMatches.length * 5;
 
-        // Availability match 
-        /*
-        if (user.availability.includes(event.date)) {
-            points += 3; 
-        }
-        */
-        const userAvailable = user.availability.some(avail => {
-            return new Date(avail).toDateString() === new Date(event.date).toDateString(); // points if the user is available on that date
-        });
-        if (userAvailable) points += 3;
+    // Availability match
+    const userAvailable = user.availability.some((avail: Date) => {
+        return new Date(avail).toDateString() === new Date(event.eventDate).toDateString();
+      });
+    if (userAvailable) points += 3;
+    // Location match (trimmed, case-insensitive)
+    if (
+      user.location &&
+      event.location &&
+      user.location.trim().toLowerCase() === event.location.trim().toLowerCase()
+    )
+      points += 2;
 
-        // Location proximity
-        //if (user.location === event.location) points += 2;
-        if (user.location && event.location && user.location === event.location) points += 2;
+    // Urgency
+    if (event.urgency.toLowerCase() === 'high') points += 1;
 
-        // Urgency
-        if (event.urgency === 'High') points += 1;
+    return points;
+  }
 
-        return points;
-    }
+  // Get suggested matches for all users
+  async getSuggestedMatches(): Promise<SuggestedMatchDto[]> {
+    // Fetch upcoming events
+    const events = await this.prisma.event.findMany({
+      where: { eventDate: { gte: new Date() } },
+    });
 
-    getSuggestedMatches(): SuggestedMatchDto[] {
-        return this.users.map(user => {
-        let bestMatch: EventDetails | null = null;
-        let maxPoints = -1;
+    // Fetch all user profiles
+    const users = await this.prisma.userProfile.findMany();
 
-        for (const event of this.events) {
-            const points = this.calculateMatchPoints(user, event);
-            if (points > maxPoints) {
-            maxPoints = points;
+    // Fetch all existing volunteer history
+    const volunteerHistory = await this.prisma.volunteerHistory.findMany();
+
+    const matches: SuggestedMatchDto[] = [];
+
+    for (const user of users) {
+      let bestMatch: any = null;
+      let maxPoints = -1;
+
+      for (const event of events) {
+        // Skip if user already assigned to this event
+        const alreadyAssigned = volunteerHistory.some(
+          (vh) => vh.userId === user.userId && vh.eventId === event.id,
+        );
+        if (alreadyAssigned) continue;
+
+        const points = this.calculateMatchPoints(user, event);
+        if (points > maxPoints) {
+          maxPoints = points;
+          bestMatch = event;
+        } else if (points === maxPoints && bestMatch) {
+          const urgencyOrder = { high: 3, medium: 2, low: 1 };
+          if (urgencyOrder[event.urgency.toLowerCase()] > urgencyOrder[bestMatch.urgency.toLowerCase()]) {
             bestMatch = event;
-            } else if (points === maxPoints && bestMatch) {
-                const urgencyOrder = { High: 3, Medium: 2, Low: 1};
-                if (urgencyOrder[event.urgency] > urgencyOrder[bestMatch.urgency]) {
-                    bestMatch = event;
-                } else if (urgencyOrder[event.urgency] === urgencyOrder[bestMatch.urgency]) {
-                    if (new Date(event.date) < new Date(bestMatch.date)) {
-                        bestMatch = event;
-                    }
-                }
+          } else if (
+            urgencyOrder[event.urgency.toLowerCase()] ===
+            urgencyOrder[bestMatch.urgency.toLowerCase()]
+          ) {
+            if (new Date(event.eventDate) < new Date(bestMatch.eventDate)) {
+              bestMatch = event;
             }
+          }
         }
+      }
 
-        return {
-            volunteerId: user.id,
-            volunteerName: user.name,
-            suggestedEvent: maxPoints > 0 && bestMatch ? bestMatch.eventName : 'No suitable match',
-            suggestedEventId: maxPoints > 0 && bestMatch ? bestMatch.eventId : null,
-        };
-        });
+      matches.push({
+        volunteerId: user.userId,
+        volunteerName: user.fullName,
+        suggestedEvent: maxPoints > 0 && bestMatch ? bestMatch.name : 'No suitable match',
+        suggestedEventId: maxPoints > 0 && bestMatch ? bestMatch.id : null,
+      });
     }
 
-    assignVolunteerToEvent(volunteerId: number, eventId: number): AssignVolunteerResponseDto {
-        const existing = this.volunteerHistory.find(vh => vh.userId === volunteerId && vh.eventId === eventId);
+    return matches;
+  }
 
-        if (existing) {
-        existing.status = 'assigned';
-        return {
-            message: 'Volunteer already matched, status updated.',
-            record: { ...existing },
-        };
-        }
+  // Assign a volunteer to an event
+  async assignVolunteerToEvent(
+    volunteerId: string,
+    eventId: string,
+  ): Promise<AssignVolunteerResponseDto> {
+    // Check if already assigned
+    const existing = await this.prisma.volunteerHistory.findFirst({
+      where: { userId: volunteerId, eventId },
+    });
 
-        const newRecord: VolunteerHistory = {
-        id: this.volunteerHistory.length + 1,
+    if (existing) {
+      return {
+        message: 'Volunteer already matched, status updated.',
+        record: existing,
+      };
+    }
+
+    const newRecord = await this.prisma.volunteerHistory.create({
+      data: {
         userId: volunteerId,
         eventId,
         status: 'assigned',
-        };
+      },
+    });
 
-        this.volunteerHistory.push(newRecord);
-
-        // remove volunteer from list after assignment
-        const userIndex = this.users.findIndex(u => u.id === volunteerId);
-        if (userIndex !== -1) {
-            this.users.splice(userIndex, 1); // removes the volunteer
-        }
-
-        return {
-        message: 'Volunteer assigned successfully.',
-        record: { ...newRecord },
-        };
-    }
+    return {
+      message: 'Volunteer assigned successfully.',
+      record: newRecord,
+    };
+  }
 }

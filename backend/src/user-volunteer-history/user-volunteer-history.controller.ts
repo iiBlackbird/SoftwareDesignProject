@@ -1,4 +1,4 @@
-import { Controller, Get, Query, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Query, ValidationPipe, BadRequestException } from '@nestjs/common';
 import { UserVolunteerHistoryService } from './user-volunteer-history.service';
 import { GetUserHistoryDto } from './dto/get-user-history.dto';
 
@@ -7,12 +7,17 @@ export class UserVolunteerHistoryController {
   constructor(private readonly historyService: UserVolunteerHistoryService) {}
 
   @Get()
-  getUserHistory(
+  async getUserHistory(
     @Query(new ValidationPipe({ transform: true }))
     query: GetUserHistoryDto,
   ) {
-    // Use the query userId if provided, otherwise default to 1
-    const userId = query.userId ?? 1;
-    return this.historyService.getUserHistory(userId);
+    const userId = query.userId;
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    return await this.historyService.getUserHistory(userId); 
   }
+
+
 }
+

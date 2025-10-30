@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -70,7 +69,7 @@ model Event {
   volunteerHistories VolunteerHistory[]
 }
 
-// VolunteerHistory table - will implement later 
+// VolunteerHistory table 
 model VolunteerHistory {
   id         String   @id @default(cuid())
   userId     String   // foreign key to User.id

@@ -4,5 +4,5 @@ export class GetUserMatchesDto {
     @IsOptional()          // optional for now 
     @IsInt()
     @Min(1)
-    userId?: number;
+    userId?: string;
 }

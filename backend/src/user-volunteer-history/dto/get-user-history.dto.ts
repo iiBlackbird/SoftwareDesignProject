@@ -1,10 +1,7 @@
-import { IsNumber, IsOptional, Min } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class GetUserHistoryDto {
-  // keep optional for now 
-  @IsNumber()
+  @IsString()
   @IsOptional()
-  @Min(1)
-  userId?: number;
+  userId?: string; 
 }
-
