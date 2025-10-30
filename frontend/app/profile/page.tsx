@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NavigationBar from '../../components/NavigationBar';
 
-const states = [
-  { code: "AL", name: "Alabama" },
-  { code: "AK", name: "Alaska" },
-  { code: "AZ", name: "Arizona" },
-  { code: "AR", name: "Arkansas" },
-  { code: "CA", name: "California" },
-  // ... add all 50 states
-];
+interface State {
+  id: string;
+  name: string;
+  abbreviation: string;
+  capital: string;
+  region: string;
+}
 
 const skillsList = [
   "Event Planning",
@@ -20,6 +19,8 @@ const skillsList = [
   "Cooking",
   "Driving",
   "Logistics",
+  "Photography",
+  "Social Media",
 ];
 
 export default function ProfilePage() {
@@ -34,6 +35,50 @@ export default function ProfilePage() {
     preferences: "",
     availability: [] as string[],
   });
+
+  const [states, setStates] = useState<State[]>([]);
+  const [statesLoading, setStatesLoading] = useState(true);
+  const [statesError, setStatesError] = useState<string | null>(null);
+
+  // Fetch states from API
+  useEffect(() => {
+    const fetchStates = async (retryCount = 0) => {
+      try {
+        setStatesLoading(true);
+        setStatesError(null);
+        
+        const response = await fetch('/api/states');
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch states: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setStates(result.data);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load states';
+        
+        // Retry once if it's a network error
+        if (retryCount < 1 && errorMessage.includes('fetch')) {
+          console.log('Retrying states fetch...');
+          setTimeout(() => fetchStates(retryCount + 1), 1000);
+          return;
+        }
+        
+        setStatesError(errorMessage);
+        console.error('Error fetching states:', err);
+      } finally {
+        setStatesLoading(false);
+      }
+    };
+
+    fetchStates();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -138,15 +183,31 @@ export default function ProfilePage() {
               required
               value={formData.state}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              disabled={statesLoading}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-green-500 focus:ring-green-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a state</option>
-              {states.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.name}
+              <option value="">
+                {statesLoading ? "Loading states..." : "Select a state"}
+              </option>
+              {states.map((state) => (
+                <option key={state.abbreviation} value={state.abbreviation}>
+                  {state.name}
                 </option>
               ))}
             </select>
+            {statesError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {statesError}
+              </p>
+            )}
+            {formData.state && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Selected: {states.find(s => s.abbreviation === formData.state)?.name} ({formData.state})
+                {states.find(s => s.abbreviation === formData.state)?.region && 
+                  ` - ${states.find(s => s.abbreviation === formData.state)?.region} Region`
+                }
+              </p>
+            )}
           </div>
 
           {/* Zip */}
