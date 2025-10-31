@@ -16,3 +16,11 @@ export interface Notification {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  page: number;
+  totalPages: number;
+  hasNext: boolean;
+}
