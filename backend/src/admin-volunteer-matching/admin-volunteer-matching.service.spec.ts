@@ -55,6 +55,22 @@ describe('AdminVolunteerMatchingService', () => {
         expect(service).toBeDefined();
     });
 
+    it('should return all events from getAllEvents', async () => {
+        const mockEventData = [
+          { id: '10', name: 'Tree Planting', eventDate: new Date() },
+          { id: '11', name: 'Beach Cleanup', eventDate: new Date() },
+        ];
+        (prisma.event.findMany as jest.Mock).mockResolvedValue(mockEventData);
+      
+        const result = await service.getAllEvents();
+      
+        expect(prisma.event.findMany).toHaveBeenCalledWith({
+          where: { eventDate: { gte: expect.any(Date) } },
+          select: { id: true, name: true },
+        });
+        expect(result).toEqual({ events: mockEventData });
+    });
+
     it('should calculate match points correctly', () => {
         const user = mockUsers[0];
         const event = mockEvents[0];
@@ -73,6 +89,17 @@ describe('AdminVolunteerMatchingService', () => {
         expect(matches[0]).toHaveProperty('volunteerId');
         expect(matches[0]).toHaveProperty('suggestedEvent');
     });
+
+    it('should skip users already assigned to an event', async () => {
+        (prisma.volunteerHistory.findMany as jest.Mock).mockResolvedValue([
+          { userId: 'u1', eventId: '1', status: 'assigned' },
+        ]);
+      
+        const matches = await service.getSuggestedMatches();
+        
+        expect(matches.find(m => m.volunteerId === 'u1')?.suggestedEvent).toBeDefined();
+      });
+      
 
     it('should handle "No suitable match"', async () => {
         const mockUser = { 
@@ -104,9 +131,6 @@ describe('AdminVolunteerMatchingService', () => {
         expect(matches[0].suggestedEvent).toBe('No suitable match');
         expect(matches[0].suggestedEventId).toBeNull();
       });
-      
-      
-    
 
     it('should assign volunteer to event successfully', async () => {
         const response = await service.assignVolunteerToEvent('u2', '1');
@@ -156,5 +180,62 @@ describe('AdminVolunteerMatchingService', () => {
 
         const matches = await service.getSuggestedMatches();
         expect(matches[0].suggestedEvent).toBe('Earlier Event');
+    });
+
+    it('should give +2 points for online or virtual events', () => {
+        const user = { availability: [], skills: [], city: '', state: '', zipcode: '' } as any;
+        const event = { location: 'Online Conference', requiredSkills: [], eventDate: '2025-11-01', urgency: 'low' } as any;        
+      
+        const points = (service as any).calculateMatchPoints(user, event);
+        expect(points).toBe(2);
+    });
+      
+    it('should give +2 points for city+state match', () => {
+        const user = { 
+            availability: [], // no availability points
+            skills: [],       // no skill points
+            city: 'Chicago', 
+            state: 'IL', 
+            zipcode: '' 
+        } as any;
+          
+        const event = { 
+            location: 'Chicago, IL', 
+            requiredSkills: [], 
+            eventDate: '2025-11-01', // not in availability
+            urgency: 'low'            // low urgency, no extra point
+        } as any;
+
+        const points = (service as any).calculateMatchPoints(user, event);
+        expect(points).toBe(2);
+    });
+      
+    it('should give +1 point for city or state match', () => {
+        const user = { availability: [], skills: [], city: 'Chicago', state: 'IL', zipcode: '' } as any;
+        const event = { location: 'Chicago, NY', requiredSkills: [], eventDate: '2025-11-01', urgency: 'low' } as any;
+        
+        const points = (service as any).calculateMatchPoints(user, event);
+        expect(points).toBe(1); // only city or state match
+        
+    });
+      
+    it('should give +1 point for ZIP match', () => {
+        const user = {
+          availability: [], // no +3 points
+          skills: [],       // no skill points
+          city: 'NoCity',   // doesn't match
+          state: 'NoState', // doesn't match
+          zipcode: '12345'
+        } as any;
+      
+        const event = {
+          location: '12345 Main St', // only ZIP matches
+          requiredSkills: [],
+          eventDate: '2025-12-01',   // doesn't match any availability
+          urgency: 'low'             // no urgency points
+        } as any;
+      
+        const points = (service as any).calculateMatchPoints(user, event);
+        expect(points).toBe(1);
     });
 });
