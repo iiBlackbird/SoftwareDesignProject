@@ -11,7 +11,7 @@ import { UserVolunteerHistoryModule } from './user-volunteer-history/user-volunt
 import { UserVolunteerMatchingModule } from './user-volunteer-matching/user-volunteer-matching.module';
 import { AdminVolunteerMatchingModule } from './admin-volunteer-matching/admin-volunteer-matching.module';
 import { NotificationModule } from './notification/notification.module';
-
+import { AdminEventsModule } from './admin-events/admin-events.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ envFilePath: '../.env', isGlobal: true }),
@@ -43,6 +43,7 @@ import { NotificationModule } from './notification/notification.module';
     UserVolunteerMatchingModule,
     AdminVolunteerMatchingModule,
     NotificationModule,
+    AdminEventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

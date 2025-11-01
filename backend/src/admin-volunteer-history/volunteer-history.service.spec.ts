@@ -1,42 +1,122 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { VolunteerHistoryService } from './volunteer-history.service';
-import { volunteerHistory } from './mock-volunteer-history';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('VolunteerHistoryService', () => {
-    let service: VolunteerHistoryService;
+  let service: VolunteerHistoryService;
+  let prisma: PrismaService;
 
-    beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-        providers: [VolunteerHistoryService],
-        }).compile();
+  const mockPrisma = {
+    volunteerHistory: {
+      findMany: jest.fn(),
+    },
+  };
 
-        service = module.get<VolunteerHistoryService>(VolunteerHistoryService);
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        VolunteerHistoryService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+
+    service = module.get<VolunteerHistoryService>(VolunteerHistoryService);
+    prisma = module.get<PrismaService>(PrismaService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('findAll', () => {
+    it('should return mapped volunteer history records', async () => {
+      const mockRecords = [
+        {
+          id: '1',
+          status: 'Attending',
+          user: { fullName: 'John Smith' },
+          event: {
+            name: 'Blood Drive',
+            description: 'First Aid Event',
+            location: 'Red Cross',
+            requiredSkills: ['First Aid'],
+            urgency: 'Medium',
+            eventDate: new Date('2025-10-10'),
+          },
+        },
+      ];
+
+      mockPrisma.volunteerHistory.findMany.mockResolvedValue(mockRecords);
+
+      const result = await service.findAll();
+
+      expect(mockPrisma.volunteerHistory.findMany).toHaveBeenCalledWith({
+        include: { user: true, event: true },
+      });
+
+      expect(result).toEqual([
+        {
+          id: '1',
+          volunteerName: 'John Smith',
+          eventName: 'Blood Drive',
+          eventDescription: 'First Aid Event',
+          location: 'Red Cross',
+          requiredSkills: ['First Aid'],
+          urgency: 'Medium',
+          eventDate: '2025-10-10',
+          participationStatus: 'Attending',
+        },
+      ]);
+    });
+  });
+
+  describe('findByVolunteer', () => {
+    it('should query volunteer history by volunteer name (case-insensitive)', async () => {
+      const name = 'John Smith';
+      const mockRecords = [
+        {
+          id: '1',
+          status: 'Attending',
+          user: { fullName: 'John Smith' },
+          event: {
+            name: 'Blood Drive',
+            description: 'First Aid Event',
+            location: 'Red Cross',
+            requiredSkills: ['First Aid'],
+            urgency: 'Medium',
+            eventDate: new Date('2025-10-10'),
+          },
+        },
+      ];
+
+      mockPrisma.volunteerHistory.findMany.mockResolvedValue(mockRecords);
+
+      const result = await service.findByVolunteer(name);
+
+      expect(mockPrisma.volunteerHistory.findMany).toHaveBeenCalledWith({
+        where: {
+          user: {
+            fullName: {
+              equals: name,
+              mode: 'insensitive',
+            },
+          },
+        },
+        include: { user: true, event: true },
+      });
+
+      expect(result[0].volunteerName).toBe('John Smith');
+      expect(result[0].eventName).toBe('Blood Drive');
     });
 
-    it('should be defined', () => {
-        expect(service).toBeDefined();
+    it('should return an empty array if no matches found', async () => {
+      mockPrisma.volunteerHistory.findMany.mockResolvedValue([]);
+      const result = await service.findByVolunteer('No Name');
+      expect(result).toEqual([]);
     });
-
-    it('findAll should return all volunteer history', () => {
-        const result = service.findAll();
-        expect(result).toEqual(volunteerHistory);
-    });
-
-    it('findByVolunteer should return filtered history by volunteer name', () => {
-        const name = 'John Smith';
-        const result = service.findByVolunteer(name);
-        expect(result.every(r => r.volunteerName === name)).toBe(true);
-    });
-
-    it('findByVolunteer should be case-insensitive', () => {
-        const name = 'john smith';
-        const result = service.findByVolunteer(name);
-        expect(result.every(r => r.volunteerName.toLowerCase() === name)).toBe(true);
-    });
-
-    it('findByVolunteer should return empty array if no match', () => {
-        const name = 'No Name';
-        const result = service.findByVolunteer(name);
-        expect(result).toEqual([]);
-    });
+  });
 });

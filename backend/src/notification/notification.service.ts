@@ -1,132 +1,250 @@
-import { Injectable } from '@nestjs/common';
-import { Notification, NotificationType } from './interfaces/notification.interface';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateNotificationDto, NotificationType } from './dto/create-notification.dto';
 
 @Injectable()
 export class NotificationService {
-  private notifications: Notification[] = [
-    {
-      id: 1,
-      type: NotificationType.ASSIGNMENT,
-      title: 'New Event Assignment',
-      message: 'You have been assigned to "Beach Cleanup Day" on Saturday, October 15.',
-      time: '10 minutes ago',
-      read: false,
-      userId: 1,
-      eventId: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 2,
-      type: NotificationType.UPDATE,
-      title: 'Event Schedule Changed',
-      message: 'The "Food Drive" event has been rescheduled to November 5th.',
-      time: '2 hours ago',
-      read: false,
-      userId: 1,
-      eventId: 2,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 3,
-      type: NotificationType.REMINDER,
-      title: 'Upcoming Event Reminder',
-      message: 'Remember your commitment to "Park Restoration" this Saturday at 9 AM.',
-      time: '1 day ago',
-      read: true,
-      userId: 1,
-      eventId: 3,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+  private readonly logger = new Logger(NotificationService.name);
 
-  private nextId = 4;
+  constructor(private prisma: PrismaService) {}
 
-  getAllNotifications(userId: number, filter?: string): Notification[] {
-    let filtered = this.notifications.filter(n => n.userId === userId);
-    
-    if (filter) {
-      switch (filter) {
-        case 'unread':
-          filtered = filtered.filter(n => !n.read);
-          break;
-        case 'assignment':
-          filtered = filtered.filter(n => n.type === NotificationType.ASSIGNMENT);
-          break;
-        case 'update':
-          filtered = filtered.filter(n => n.type === NotificationType.UPDATE);
-          break;
-        case 'reminder':
-          filtered = filtered.filter(n => n.type === NotificationType.REMINDER);
-          break;
-      }
+  async createNotification(data: CreateNotificationDto) {
+    try {
+      return await this.prisma.notification.create({
+        data: {
+          type: data.type,
+          title: data.title,
+          message: data.message,
+          time: data.time,
+          read: data.read || false,
+          userId: data.userId,
+          eventId: data.eventId,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to create notification: ${error.message}`);
+      throw error;
     }
-    
-    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  getNotificationCounts(userId: number): { [key: string]: number } {
-    const userNotifications = this.notifications.filter(n => n.userId === userId);
-    
-    return {
-      all: userNotifications.length,
-      unread: userNotifications.filter(n => !n.read).length,
-      assignment: userNotifications.filter(n => n.type === NotificationType.ASSIGNMENT).length,
-      update: userNotifications.filter(n => n.type === NotificationType.UPDATE).length,
-      reminder: userNotifications.filter(n => n.type === NotificationType.REMINDER).length,
-    };
+  async createBulkNotifications(notificationsData: CreateNotificationDto[]) {
+    try {
+      return await this.prisma.notification.createMany({
+        data: notificationsData.map(notification => ({
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          time: notification.time,
+          read: notification.read || false,
+          userId: notification.userId,
+          eventId: notification.eventId,
+        })),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to create bulk notifications: ${error.message}`);
+      throw error;
+    }
   }
 
-  createNotification(createNotificationDto: CreateNotificationDto): Notification {
-    const notification: Notification = {
-      id: this.nextId++,
-      type: createNotificationDto.type,
-      title: createNotificationDto.title,
-      message: createNotificationDto.message,
-      time: 'Just now',
+  async notifyVolunteersOfNewEvent(event: {
+  id: string;
+  name: string;
+  requiredSkills: string[];
+}) {
+  try {
+    
+    const matchingUsers = await this.prisma.userProfile.findMany({
+      where: {
+        skills: {
+          hasSome: event.requiredSkills,
+        },
+        
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (matchingUsers.length === 0) {
+      this.logger.log(`No matching volunteers found for event: ${event.name}`);
+      return;
+    }
+
+    const notifications = matchingUsers.map(user => ({
+      type: NotificationType.ASSIGNMENT,
+      title: 'New Event Matches Your Skills!',
+      message: `The event "${event.name}" is looking for volunteers with skills like yours.`,
+      time: new Date().toISOString(),
       read: false,
-      userId: createNotificationDto.userId,
-      eventId: createNotificationDto.eventId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      userId: user.userId,
+      eventId: event.id,
+    }));
 
-    this.notifications.push(notification);
-    return notification;
+    const result = await this.createBulkNotifications(notifications);
+    this.logger.log(`Sent ${result.count} notifications for event: ${event.name}`);
+    return result;
+  } catch (error) {
+    this.logger.error(`Failed to notify volunteers for event ${event.name}: ${error.message}`);
+    throw error;
+  }
+}
+
+  async sendEventUpdateNotification(event: {
+    id: string;
+    name: string;
+  }, userIds: string[]) {
+    try {
+      const notifications = userIds.map(userId => ({
+        type: NotificationType.UPDATE,
+        title: 'Event Updated',
+        message: `The event "${event.name}" has been updated. Please review the changes.`,
+        time: new Date().toISOString(),
+        read: false,
+        userId: userId,
+        eventId: event.id,
+      }));
+
+      return await this.createBulkNotifications(notifications);
+    } catch (error) {
+      this.logger.error(`Failed to send event update notifications: ${error.message}`);
+      throw error;
+    }
   }
 
-  markAsRead(notificationIds: number[], userId: number): { markedCount: number } {
-    let markedCount = 0;
+  async sendReminderNotification(event: {
+    id: string;
+    name: string;
+    date: Date;
+  }, userIds: string[]) {
+    try {
+      const notifications = userIds.map(userId => ({
+        type: NotificationType.REMINDER,
+        title: 'Event Reminder',
+        message: `Reminder: The event "${event.name}" is coming up soon!`,
+        time: new Date().toISOString(),
+        read: false,
+        userId: userId,
+        eventId: event.id,
+      }));
+
+      return await this.createBulkNotifications(notifications);
+    } catch (error) {
+      this.logger.error(`Failed to send reminder notifications: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getUserNotifications(userId: string, options: { 
+    unreadOnly?: boolean; 
+    limit?: number; 
+    page?: number; 
+  } = {}) {
+    const { unreadOnly = false, limit = 20, page = 1 } = options;
     
-    this.notifications.forEach(notification => {
-      if (notificationIds.includes(notification.id) && notification.userId === userId && !notification.read) {
-        notification.read = true;
-        notification.updatedAt = new Date();
-        markedCount++;
-      }
-    });
+    const where: any = { userId };
+    if (unreadOnly) {
+      where.read = false;
+    }
 
-    return { markedCount };
+    try {
+      const [notifications, total] = await Promise.all([
+        this.prisma.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: (page - 1) * limit,
+        }),
+        this.prisma.notification.count({ where }),
+      ]);
+
+      return {
+        notifications,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get notifications for user ${userId}: ${error.message}`);
+      throw error;
+    }
   }
 
-  markAllAsRead(userId: number): { markedCount: number } {
-    let markedCount = 0;
-    
-    this.notifications.forEach(notification => {
-      if (notification.userId === userId && !notification.read) {
-        notification.read = true;
-        notification.updatedAt = new Date();
-        markedCount++;
-      }
-    });
-
-    return { markedCount };
+  async getNotificationById(id: string, userId: string) {
+    try {
+      return await this.prisma.notification.findFirst({
+        where: {
+          id,
+          userId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+            },
+          },
+          event: {
+            select: {
+              id: true,
+              name: true,
+              eventDate: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get notification ${id}: ${error.message}`);
+      throw error;
+    }
   }
 
-  getNotificationById(id: number, userId: number): Notification | null {
-    return this.notifications.find(n => n.id === id && n.userId === userId) || null;
+  async markAsRead(notificationId: string, userId: string) {
+    try {
+      return await this.prisma.notification.updateMany({
+        where: {
+          id: notificationId,
+          userId: userId,
+        },
+        data: {
+          read: true,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to mark notification ${notificationId} as read: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async markAllAsRead(userId: string) {
+    try {
+      return await this.prisma.notification.updateMany({
+        where: {
+          userId,
+          read: false,
+        },
+        data: {
+          read: true,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to mark all notifications as read for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getUnreadCount(userId: string) {
+    try {
+      return await this.prisma.notification.count({
+        where: {
+          userId,
+          read: false,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get unread count for user ${userId}: ${error.message}`);
+      throw error;
+    }
   }
 }

@@ -4,58 +4,65 @@ import { useState, useEffect } from "react";
 import NavigationBar from '../../../components/NavigationBar';
 
 type VolunteerMatch = {
-  volunteerId: number;
+  volunteerId: string;
   volunteerName: string;
   suggestedEvent: string;
-  suggestedEventId: number | null;
+  suggestedEventId: string | null;
+};
+
+type EventOption = {
+  id: string;
+  name: string;
 };
 
 export default function VolunteerMatchingPage() {
   const [matches, setMatches] = useState<VolunteerMatch[]>([]);
-  const [assignments, setAssignments] = useState<{ [id: number]: number | null }>({});
-  const [events, setEvents] = useState<{ id: number; name: string }[]>([]);
+  const [assignments, setAssignments] = useState<{ [id: string]: string | null }>({});
+  const [events, setEvents] = useState<EventOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // fetch suggested matches from backend
   useEffect(() => {
-    async function fetchMatches() {
+    async function fetchData() {
       try {
-        const res = await fetch("http://localhost:3000/admin/volunteer-matching");
-        if (!res.ok) throw new Error("Failed to fetch matches");
-        const data: VolunteerMatch[] = await res.json();
-        setMatches(data);
+        // 1️⃣ Fetch suggested matches
+        const resMatches = await fetch("http://localhost:3000/admin/volunteer-matching");
+        if (!resMatches.ok) throw new Error("Failed to fetch matches");
+        const matchesData: VolunteerMatch[] = await resMatches.json();
+        setMatches(matchesData);
 
-        // initialize assignments with suggestedEventId
-        const initialAssignments: { [id: number]: number | null } = {};
-        data.forEach((v) => {
+        // Initialize assignments
+        const initialAssignments: { [id: string]: string | null } = {};
+        matchesData.forEach((v) => {
           initialAssignments[v.volunteerId] = v.suggestedEventId;
         });
         setAssignments(initialAssignments);
 
-        // Also fetch all events for now
-        setEvents([
-          { id: 1, name: "Blood Drive" },
-          { id: 2, name: "Meal Kit Assembly" },
-          { id: 3, name: "Cooking Class" },
-        ]);
+        // 2️⃣ Fetch all upcoming events
+        const resEvents = await fetch("http://localhost:3000/admin/events/upcoming");
+        if (!resEvents.ok) throw new Error("Failed to fetch events");
+
+        const eventsData = await resEvents.json();
+        // Use the array property returned by your backend
+        //setEvents(eventsData.events || []); 
+        setEvents(eventsData || []);
 
         setLoading(false);
       } catch (err) {
         console.error(err);
-        setError("Failed to load volunteer matches.");
+        setError("Failed to load volunteer matches or events.");
         setLoading(false);
       }
     }
 
-    fetchMatches();
+    fetchData();
   }, []);
 
-  const handleChange = (volunteerId: number, eventId: number) => {
+  const handleChange = (volunteerId: string, eventId: string) => {
     setAssignments((prev) => ({ ...prev, [volunteerId]: eventId }));
   };
 
-  const handleAssign = async (volunteerId: number) => {
+  const handleAssign = async (volunteerId: string) => {
     const eventId = assignments[volunteerId];
     if (!eventId) {
       alert("Please select a valid event to assign.");
@@ -63,14 +70,16 @@ export default function VolunteerMatchingPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/admin/volunteer-matching/assign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ volunteerId, eventId }),
-      });
+      const res = await fetch(
+        "http://localhost:3000/admin/volunteer-matching/assign",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ volunteerId, eventId }),
+        }
+      );
       const data = await res.json();
 
-      // remove from frontend list - will replace later 
       if (data.message.toLowerCase().includes("successfully")) {
         setMatches((prev) => prev.filter((v) => v.volunteerId !== volunteerId));
       }
@@ -137,7 +146,7 @@ export default function VolunteerMatchingPage() {
                       <select
                         value={assignments[volunteer.volunteerId] || ""}
                         onChange={(e) =>
-                          handleChange(volunteer.volunteerId, Number(e.target.value))
+                          handleChange(volunteer.volunteerId, e.target.value)
                         }
                         className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       >

@@ -1,27 +1,58 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NavigationBar from '../../../components/NavigationBar';
+import NavigationBar from "../../../components/NavigationBar";
 
 type VolunteerRecord = {
-  id: number;
-  eventName: string;
-  eventDescription: string;
-  location: string;
-  requiredSkills: string[];
-  urgency: string;
-  eventDate: string;
-  participationStatus: string;
+  id: string;
+  status: string;
+  event: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    requiredSkills: string[];
+    urgency: string;
+    eventDate: string;
+  };
 };
 
 export default function UserVolunteerHistory() {
   const [history, setHistory] = useState<VolunteerRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:3000/user/volunteer-history")
-      .then((res) => res.json())
-      .then((data) => setHistory(data))
-      .catch((err) => console.error("Error fetching data:", err));
+    const token = localStorage.getItem("accessToken"); 
+
+    if (!token) {
+      setError("You must be logged in to view your volunteer history.");
+      return;
+    }
+
+    fetch("http://localhost:3000/user/volunteer-history", {
+      headers: {
+        Authorization: `Bearer ${token}`, // send JWT to backend
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const message = await res.text();
+          throw new Error(message || "Failed to fetch volunteer history");
+        }
+        return res.json();
+      })
+      .then((data) =>
+        setHistory(
+          data.map((item: any) => ({
+            ...item,
+            event: {
+              ...item.event,
+              eventDate: new Date(item.event.eventDate).toLocaleDateString(),
+            },
+          }))
+        )
+      )
+      .catch((err) => setError(err.message));
   }, []);
 
   return (
@@ -39,68 +70,74 @@ export default function UserVolunteerHistory() {
         </div>
       </header>
 
-      {/* User history table */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-100 dark:bg-gray-700">
-              <tr>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Event Name
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Description
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Location
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Required Skills
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Urgency
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Event Date
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {history.map((record) => (
-                <tr
-                  key={record.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                    {record.eventName}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.eventDescription}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.location}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.requiredSkills.join(", ")}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.urgency}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
-                    {record.eventDate}
-                  </td>
-                  <td className="py-3 px-4 font-medium text-green-600 dark:text-green-400">
-                    {record.participationStatus}
-                  </td>
+        {error ? (
+          <div className="text-center text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-100 dark:bg-gray-700">
+                <tr>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Event Name
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Description
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Location
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Required Skills
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Urgency
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Event Date
+                  </th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Status
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {history.map((record) => (
+                  <tr
+                    key={record.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                      {record.event.name}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
+                      {record.event.description}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
+                      {record.event.location}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
+                      {record.event.requiredSkills.join(", ")}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
+                      {record.event.urgency}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 dark:text-gray-300">
+                      {record.event.eventDate}
+                    </td>
+                    <td className="py-3 px-4 font-medium text-green-600 dark:text-green-400">
+                      {record.status}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );
 }
+

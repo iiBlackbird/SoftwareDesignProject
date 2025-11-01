@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Head from 'next/head';
 import Link from 'next/link';
 import NavigationBar from '../../components/NavigationBar';
 
-// Types
+// Types (mostly changed from number -> string to fit with DB)
 interface Notification {
-  id: number;
+  id: string; // Changed from number to string
   type: 'assignment' | 'update' | 'reminder';
   title: string;
   message: string;
   time: string;
   read: boolean;
-  userId?: number;
-  eventId?: number;
+  userId?: string; // Changed from number to string
+  eventId?: string; // Changed from number to string
+  createdAt: string; 
 }
 
 interface NotificationCounts {
@@ -36,52 +37,91 @@ interface ApiResponse {
 // API Service Functions
 const API_BASE_URL = 'http://localhost:3001';
 
+// Helper function to format time
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+  
+  if (diffInHours < 1) return `${Math.floor(diffInHours * 60)} minutes ago`;
+  if (diffInHours < 24) return `${Math.floor(diffInHours)} hours ago`;
+  return `${Math.floor(diffInHours / 24)} days ago`;
+};
+
 const notificationAPI = {
   // Fetch notifications for a user
-  async getNotifications(userId: number, filter?: string): Promise<ApiResponse> {
+  async getNotifications(options?: { 
+    unreadOnly?: boolean; 
+    limit?: number; 
+    page?: number; 
+  }): Promise<any> {
     try {
       const params = new URLSearchParams();
-      if (filter && filter !== 'all') params.append('filter', filter);
+      if (options?.unreadOnly) params.append('unreadOnly', 'true');
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.page) params.append('page', options.page.toString());
       
-      const response = await fetch(`${API_BASE_URL}/notifications/user/${userId}?${params}`);
+      const response = await fetch(`${API_BASE_URL}/notifications?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Add auth header
+        },
+      });
       if (!response.ok) throw new Error('Failed to fetch notifications');
       return response.json();
     } catch (error) {
       console.warn('API unavailable, using fallback data');
-      throw error; // Will trigger fallback to hardcoded data
+      throw error;
+    }
+  },
+  async getUnreadCount(): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch unread count');
+      return response.json();
+    } catch (error) {
+      console.warn('API unavailable, using fallback data');
+      throw error;
     }
   },
 
-  // Mark notifications as read
-  async markAsRead(userId: number, notificationIds: number[]): Promise<{ success: boolean; data: { markedCount: number } }> {
+
+ // Mark single notification as read
+  async markAsRead(notificationId: string): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/notifications/user/${userId}/mark-read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationIds }),
+      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
       });
-      if (!response.ok) throw new Error('Failed to mark notifications as read');
+      if (!response.ok) throw new Error('Failed to mark notification as read');
       return response.json();
     } catch (error) {
       console.warn('API unavailable, using local state only');
-      // Return success for local state updates even if API fails
-      return { success: true, data: { markedCount: notificationIds.length } };
+      return { success: true, data: { count: 1 } };
     }
   },
 
   // Mark all notifications as read
-  async markAllAsRead(userId: number): Promise<{ success: boolean; data: { markedCount: number } }> {
+  async markAllAsRead(): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/notifications/user/${userId}/mark-all-read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) throw new Error('Failed to mark all notifications as read');
       return response.json();
     } catch (error) {
       console.warn('API unavailable, using local state only');
-      // Return success for local state updates
-      return { success: true, data: { markedCount: 1 } };
+      return { success: true, data: { count: 1 } };
     }
   },
 };
@@ -89,80 +129,131 @@ const notificationAPI = {
 // Fallback hardcoded data for when API is unavailable
 const fallbackNotifications: Notification[] = [
   {
-    id: 1,
+    id: 'notif1',
     type: 'assignment',
-    title: 'New Event Assignment',
-    message: 'You have been assigned to "Beach Cleanup Day" on Saturday, October 15.',
-    time: '10 minutes ago',
+    title: 'New Event Matches Your Skills!',
+    message: 'The event "Blood Drive" is looking for volunteers with skills like yours.',
+    time: '2023-10-25T10:30:00Z',
     read: false,
-    userId: 1,
-    eventId: 1,
+    userId: 'user1',
+    eventId: 'event1',
+    createdAt: '2023-10-25T10:30:00Z',
   },
   {
-    id: 2,
+    id: 'notif2',
     type: 'update',
-    title: 'Event Schedule Changed',
-    message: 'The "Food Drive" event has been rescheduled to November 5th.',
-    time: '2 hours ago',
+    title: 'Event Updated',
+    message: 'The event "Food Drive" has been updated. Please review the changes.',
+    time: '2023-10-25T08:15:00Z',
     read: false,
-    userId: 1,
-    eventId: 2,
+    userId: 'user1',
+    eventId: 'event2',
+    createdAt: '2023-10-25T08:15:00Z',
   },
   {
-    id: 3,
+    id: 'notif3',
     type: 'reminder',
-    title: 'Upcoming Event Reminder',
-    message: 'Remember your commitment to "Park Restoration" this Saturday at 9 AM.',
-    time: '1 day ago',
+    title: 'Event Reminder',
+    message: 'Reminder: The event "Park Restoration" is coming up soon!',
+    time: '2023-10-24T14:20:00Z',
     read: true,
-    userId: 1,
-    eventId: 3,
+    userId: 'user1',
+    eventId: 'event3',
+    createdAt: '2023-10-24T14:20:00Z',
   },
   {
-    id: 4,
+    id: 'notif4',
     type: 'assignment',
-    title: 'New Volunteer Role',
+    title: 'New Volunteer Role Assigned',
     message: 'You have been assigned as Team Lead for the "Homeless Shelter Dinner" event.',
-    time: '2 days ago',
-    read: true,
-    userId: 1,
-    eventId: 4,
+    time: '2023-10-23T16:45:00Z',
+    read: false,
+    userId: 'user1',
+    eventId: 'event4',
+    createdAt: '2023-10-23T16:45:00Z',
   },
   {
-    id: 5,
+    id: 'notif5',
     type: 'update',
     title: 'Volunteer Requirements Updated',
-    message: 'The requirements for "Community Garden" have been updated.',
-    time: '3 days ago',
+    message: 'The requirements for "Community Garden" have been updated with new safety guidelines.',
+    time: '2023-10-22T11:20:00Z',
     read: true,
-    userId: 1,
-    eventId: 5,
+    userId: 'user1',
+    eventId: 'event5',
+    createdAt: '2023-10-22T11:20:00Z',
   },
   {
-    id: 6,
+    id: 'notif6',
     type: 'reminder',
     title: 'Training Session Reminder',
-    message: 'Your volunteer training session is scheduled for tomorrow at 2 PM.',
-    time: '4 days ago',
+    message: 'Your volunteer training session is scheduled for tomorrow at 2 PM at the community center.',
+    time: '2023-10-21T09:10:00Z',
     read: true,
-    userId: 1,
-    eventId: 6,
+    userId: 'user1',
+    eventId: 'event6',
+    createdAt: '2023-10-21T09:10:00Z',
+  },
+  {
+    id: 'notif7',
+    type: 'assignment',
+    title: 'Emergency Response Team',
+    message: 'Your skills are needed for the emergency flood relief effort this weekend.',
+    time: '2023-10-20T14:30:00Z',
+    read: false,
+    userId: 'user1',
+    eventId: 'event7',
+    createdAt: '2023-10-20T14:30:00Z',
+  },
+  {
+    id: 'notif8',
+    type: 'update',
+    title: 'Schedule Change',
+    message: 'The "Beach Cleanup" event has been moved to next Saturday due to weather conditions.',
+    time: '2023-10-19T17:25:00Z',
+    read: true,
+    userId: 'user1',
+    eventId: 'event8',
+    createdAt: '2023-10-19T17:25:00Z',
+  },
+  {
+    id: 'notif9',
+    type: 'reminder',
+    title: 'Documentation Deadline',
+    message: 'Remember to submit your volunteer hours documentation by end of day tomorrow.',
+    time: '2023-10-18T10:15:00Z',
+    read: true,
+    userId: 'user1',
+    eventId: 'event9',
+    createdAt: '2023-10-18T10:15:00Z',
+  },
+  {
+    id: 'notif10',
+    type: 'assignment',
+    title: 'New Mentorship Opportunity',
+    message: 'You have been matched with a new volunteer for the mentorship program starting next week.',
+    time: '2023-10-17T13:40:00Z',
+    read: true,
+    userId: 'user1',
+    eventId: 'event10',
+    createdAt: '2023-10-17T13:40:00Z',
   },
 ];
+
 
 // Calculate fallback counts
 const getFallbackCounts = (notifications: Notification[]): NotificationCounts => ({
   all: notifications.length,
-  unread: notifications.filter(n => !n.read).length,
-  assignment: notifications.filter(n => n.type === 'assignment').length,
-  update: notifications.filter(n => n.type === 'update').length,
-  reminder: notifications.filter(n => n.type === 'reminder').length,
+  unread: notifications.filter((n: Notification) => !n.read).length,
+  assignment: notifications.filter((n: Notification) => n.type === 'assignment').length,
+  update: notifications.filter((n: Notification) => n.type === 'update').length,
+  reminder: notifications.filter((n: Notification) => n.type === 'reminder').length,
 });
 
 // Notification Item Component
 function NotificationItem({ notification, onMarkAsRead }: { 
   notification: Notification; 
-  onMarkAsRead: (id: number) => void;
+  onMarkAsRead: (id: string) => void;
 }) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -233,12 +324,10 @@ function FilterSidebar({
   activeFilter, 
   onFilterChange, 
   notificationCounts,
-  usingFallback = false
 }: {
   activeFilter: string;
   onFilterChange: (filter: string) => void;
   notificationCounts: NotificationCounts;
-  usingFallback?: boolean;
 }) {
   const filters = [
     { key: 'all', label: 'All Notifications', icon: 'fas fa-inbox', count: notificationCounts.all },
@@ -252,11 +341,6 @@ function FilterSidebar({
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-fit">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white">Filters</h3>
-        {usingFallback && (
-          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-            Offline
-          </span>
-        )}
       </div>
       
       <div className="space-y-2">
@@ -315,29 +399,47 @@ export default function NotificationsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usingFallback, setUsingFallback] = useState(false);
-
-  // Current user ID (in a real app, this would come from authentication)
-  const currentUserId = 1;
 
   // Load notifications from backend with fallback or N/A
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setError(null);
-      setUsingFallback(false);
       
-      const response = await notificationAPI.getNotifications(
-        currentUserId, 
-        activeFilter === 'all' ? undefined : activeFilter
-      );
+      const response = await notificationAPI.getNotifications({
+        unreadOnly: activeFilter === 'unread',
+        limit: 20,
+        page: 1,
+      });
       
       if (response.success) {
-        setNotifications(response.data.notifications);
-        setNotificationCounts(response.data.counts);
+        // Transform backend data to match frontend interface
+        const transformedNotifications = response.data.notifications.map((n: any) => ({
+          id: n.id,
+          type: n.type as 'assignment' | 'update' | 'reminder',
+          title: n.title,
+          message: n.message,
+          time: n.time, // or use n.createdAt for display
+          read: n.read,
+          userId: n.userId,
+          eventId: n.eventId,
+          createdAt: n.createdAt,
+        }));
+        
+        setNotifications(transformedNotifications);
+        
+        // Calculate counts from the data
+        const counts = {
+            all: response.data.total,
+            unread: transformedNotifications.filter((n: Notification) => !n.read).length,
+            assignment: transformedNotifications.filter((n: Notification) => n.type === 'assignment').length,
+            update: transformedNotifications.filter((n: Notification) => n.type === 'update').length,
+            reminder: transformedNotifications.filter((n: Notification) => n.type === 'reminder').length,
+        };
+        
+        setNotificationCounts(counts);
       }
     } catch (err) {
       // Use fallback data when API is unavailable
-      setUsingFallback(true);
       setError('Backend unavailable. Using hardcode/demo data.');
       
       // Filter fallback data based on active filter
@@ -355,17 +457,17 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeFilter]);
 
   // Load notifications on component mount and when filter changes
   useEffect(() => {
     loadNotifications();
-  }, [activeFilter]);
+  }, [loadNotifications]);
 
   // Mark a notification as read
-  const markAsRead = async (id: number) => {
+  const markAsRead = async (id: string) => {
     try {
-      const response = await notificationAPI.markAsRead(currentUserId, [id]);
+      const response = await notificationAPI.markAsRead(id);
       
       if (response.success) {
         // Update local state to reflect the change
@@ -397,7 +499,7 @@ export default function NotificationsPage() {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const response = await notificationAPI.markAllAsRead(currentUserId);
+      const response = await notificationAPI.markAllAsRead();
       
       if (response.success) {
         // Update local state to reflect all notifications are read
@@ -454,25 +556,8 @@ export default function NotificationsPage() {
       <NavigationBar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Connection Status */}
-        {usingFallback && (
-          <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-center">
-              <i className="fas fa-wifi text-yellow-500 mr-3"></i>
-              <div>
-                <p className="text-yellow-700 dark:text-yellow-300 text-sm font-medium">
-                  Status: Offline
-                </p>
-                <p className="text-yellow-600 dark:text-yellow-400 text-xs">
-                  Backend unavailable. Showing hardcode/demo data. Changes will not persist.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Error Alert */}
-        {error && !usingFallback && (
+        {error && (
           <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-center">
               <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
@@ -494,7 +579,6 @@ export default function NotificationsPage() {
               activeFilter={activeFilter}
               onFilterChange={setActiveFilter}
               notificationCounts={notificationCounts}
-              usingFallback={usingFallback}
             />
           </div>
 

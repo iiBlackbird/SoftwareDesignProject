@@ -1,24 +1,43 @@
-import { IsEnum, IsString, IsInt, Min, MaxLength, IsOptional } from 'class-validator';
-import { NotificationType } from '../interfaces/notification.interface';
+import { IsEnum, IsOptional, IsString, IsBoolean, IsDateString, Length } from 'class-validator';
+
+export enum NotificationType {
+  ASSIGNMENT = 'assignment',
+  UPDATE = 'update',
+  REMINDER = 'reminder',
+}
 
 export class CreateNotificationDto {
-  @IsEnum(NotificationType)
+  @IsEnum(NotificationType, { 
+    message: 'Type must be one of: assignment, update, reminder' 
+  })
   type: NotificationType;
 
   @IsString()
-  @MaxLength(100)
+  @Length(1, 255, { 
+    message: 'Title must be between 1 and 255 characters' 
+  })
   title: string;
 
   @IsString()
-  @MaxLength(500)
+  @Length(1, 1000, { 
+    message: 'Message must be between 1 and 1000 characters' 
+  })
   message: string;
 
-  @IsInt()
-  @Min(1)
-  userId: number;
+  @IsString()
+  @IsDateString({}, { 
+    message: 'Time must be a valid ISO date string' 
+  })
+  time: string;
+
+  @IsBoolean()
+  @IsOptional()
+  read?: boolean;
+
+  @IsString()
+  userId: string;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  eventId?: number;
+  @IsString()
+  eventId?: string;
 }

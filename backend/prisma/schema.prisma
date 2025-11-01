@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -34,6 +33,7 @@ model User {
 
   profile     UserProfile? // 1 user - 1 profile
   volunteerHistories VolunteerHistory[] // 1 user - many volunteer history records
+  notifications Notification[] // 1 user - many notifications
 }
 
 model UserProfile {
@@ -68,9 +68,10 @@ model Event {
   updatedAt    DateTime @updatedAt
 
   volunteerHistories VolunteerHistory[]
+  notifications Notification[] //  1 event - many notifications
 }
 
-// VolunteerHistory table - will implement later 
+// VolunteerHistory table 
 model VolunteerHistory {
   id         String   @id @default(cuid())
   userId     String   // foreign key to User.id
@@ -82,4 +83,24 @@ model VolunteerHistory {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  message   String
+  time      String
+  read      Boolean  @default(false)
+  userId    String
+  eventId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
 }

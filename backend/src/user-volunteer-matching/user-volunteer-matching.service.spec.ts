@@ -1,54 +1,100 @@
-import { UserVolunteerMatchingService } from "./user-volunteer-matching.service";
+import { UserVolunteerMatchingService } from './user-volunteer-matching.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('UserVolunteerMatchingService', () => {
-    let service: UserVolunteerMatchingService;
+  let service: UserVolunteerMatchingService;
+  let prisma: jest.Mocked<PrismaService>;
 
-    beforeEach(() => {
-        service = new UserVolunteerMatchingService();
+  beforeEach(() => {
+    prisma = {
+      volunteerHistory: {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+    } as any;
+
+    service = new UserVolunteerMatchingService(prisma);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('getMatchedEventsForUser', () => {
+    it('should return formatted matched events', async () => {
+      const mockRecord = [
+        {
+          id: 1,
+          status: 'Matched',
+          event: {
+            id: 'e1',
+            name: 'Beach Cleanup',
+            description: 'Cleaning event',
+            location: 'Santa Monica',
+            requiredSkills: ['Teamwork'],
+            urgency: 'High',
+            eventDate: new Date('2025-10-20'),
+          },
+        },
+      ];
+
+      prisma.volunteerHistory.findMany.mockResolvedValue(mockRecord);
+
+      const result = await service.getMatchedEventsForUser('u1');
+
+      expect(prisma.volunteerHistory.findMany).toHaveBeenCalledWith({
+        where: { userId: 'u1', status: 'Matched' },
+        include: { event: true },
+      });
+      expect(result).toEqual([
+        {
+          id: 1,
+          eventId: 'e1',
+          eventName: 'Beach Cleanup',
+          description: 'Cleaning event',
+          location: 'Santa Monica',
+          requiredSkills: ['Teamwork'],
+          urgency: 'High',
+          eventDate: '2025-10-20',
+          status: 'Matched',
+        },
+      ]);
     });
 
-    it('should be defined', () => {
-        expect(service).toBeDefined();
+    it('should return an empty array if no matches found', async () => {
+      prisma.volunteerHistory.findMany.mockResolvedValue([]);
+      const result = await service.getMatchedEventsForUser('u2');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('enrollInEvent', () => {
+    it('should update a matched record to Enrolled', async () => {
+      const mockRecord = { id: 1, userId: 'u1', eventId: 'e1', status: 'Matched' };
+      prisma.volunteerHistory.findFirst.mockResolvedValue(mockRecord);
+      prisma.volunteerHistory.update.mockResolvedValue({
+        ...mockRecord,
+        status: 'Enrolled',
+      });
+
+      const result = await service.enrollInEvent('u1', 'e1');
+
+      expect(prisma.volunteerHistory.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'u1', eventId: 'e1', status: 'Matched' },
+      });
+      expect(prisma.volunteerHistory.update).toHaveBeenCalledWith({
+        where: { id: mockRecord.id },
+        data: { status: 'Enrolled' },
+      });
+      expect(result.status).toBe('Enrolled');
     });
 
-    it('should return matched events for user', () => {
-        const matches = service.getUserMatches(1);
-        expect(matches).toBeDefined;
-        expect(matches.length).toBe(2);
-        expect(matches[0]).toHaveProperty('eventName');
-        expect(matches[0]).toHaveProperty('status');
+    it('should throw if no matched record exists', async () => {
+      prisma.volunteerHistory.findFirst.mockResolvedValue(null);
+      await expect(service.enrollInEvent('u1', 'eX')).rejects.toThrow(
+        'No matched record found for this event and user',
+      );
     });
-
-    it('should return an empty array for a user that does not exist', () => {
-        const matches = service.getUserMatches(999);
-        expect(matches).toEqual([]);
-    });
-
-    it('should return an empty array if user exists but has no matching events', () => {
-        (service as any).users.push({
-            id: 3,
-            name: 'New User',
-            skills: ['Organization'],
-            location: 'Downtown',
-        });
-
-        const matches = service.getUserMatches(3);
-        expect(matches).toEqual([]);
-    });
-
-    it('should include volunteer status in matched event', () => {
-        const matches = service.getUserMatches(1);
-        const enrolledEvent = matches.find((m) => m.status === 'enrolled');
-        expect(enrolledEvent).toBeDefined();
-    });
-
-    it('should not include null events in result', () => {
-        const originalEvents = (service as any).eventDetails;
-        (service as any).eventDetails = [];
-
-        const matches = service.getUserMatches(1);
-        expect(matches).toEqual([]);
-
-        (service as any).eventDetails = originalEvents;
-    });
+  });
 });

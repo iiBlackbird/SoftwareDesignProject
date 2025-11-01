@@ -1,30 +1,80 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserVolunteerHistoryService } from './user-volunteer-history.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('UserVolunteerHistoryService', () => {
-    let service: UserVolunteerHistoryService;
+  let service: UserVolunteerHistoryService;
+  let prismaService: PrismaService;
 
-    beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-        providers: [UserVolunteerHistoryService],
-        }).compile();
+  const mockPrismaService = {
+    volunteerHistory: {
+      findMany: jest.fn(),
+    },
+  };
 
-        service = module.get<UserVolunteerHistoryService>(UserVolunteerHistoryService);
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserVolunteerHistoryService,
+        { provide: PrismaService, useValue: mockPrismaService },
+      ],
+    }).compile();
+
+    service = module.get<UserVolunteerHistoryService>(UserVolunteerHistoryService);
+    prismaService = module.get<PrismaService>(PrismaService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  it('should call prisma.volunteerHistory.findMany with correct parameters', async () => {
+    const userId = 'user123';
+    const mockResponse = [
+      {
+        id: '1',
+        userId: 'user123',
+        eventId: 'event1',
+        status: 'completed',
+        event: { id: 'event1', name: 'Beach Cleanup' },
+      },
+    ];
+
+    mockPrismaService.volunteerHistory.findMany.mockResolvedValue(mockResponse);
+
+    const result = await service.getUserHistory(userId);
+
+    expect(prismaService.volunteerHistory.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaService.volunteerHistory.findMany).toHaveBeenCalledWith({
+      where: { userId },
+      include: { event: true },
     });
+    expect(result).toEqual(mockResponse);
+  });
 
-    it('should be defined', () => {
-        expect(service).toBeDefined();
-    });
+  it('should return an empty array if no history is found', async () => {
+    const userId = 'nonexistentUser';
+    mockPrismaService.volunteerHistory.findMany.mockResolvedValue([]);
 
-    it('should return history for user with ID 1', () => {
-        const history = service.getUserHistory(1);
-        expect(history).toHaveLength(1);
-        expect(history[0].userId).toBe(1);
-        expect(history[0].eventName).toBe('Meal Kit Assembly');
-    });
+    const result = await service.getUserHistory(userId);
 
-    it('should return empty array for user with no history', () => {
-        const history = service.getUserHistory(999);
-        expect(history).toEqual([]);
+    expect(prismaService.volunteerHistory.findMany).toHaveBeenCalledWith({
+      where: { userId },
+      include: { event: true },
     });
+    expect(result).toEqual([]);
+  });
+
+  it('should throw an error if prisma throws an error', async () => {
+    const userId = 'errorUser';
+    mockPrismaService.volunteerHistory.findMany.mockRejectedValue(
+      new Error('Database error'),
+    );
+
+    await expect(service.getUserHistory(userId)).rejects.toThrow('Database error');
+  });
 });

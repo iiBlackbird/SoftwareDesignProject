@@ -4,9 +4,9 @@ import { IsInt, IsNotEmpty, Min } from 'class-validator';
 export class AssignVolunteerResponseDto {
     message: string;
     record?: {
-      id: number;
-      userId: number;
-      eventId: number;
+      id: string;
+      userId: string;
+      eventId: string;
       status: string;
     };
 }

@@ -1,10 +1,54 @@
-import { AdminVolunteerMatchingService } from "./admin-volunteer-matching.service";
+import { Test, TestingModule } from '@nestjs/testing';
+import { AdminVolunteerMatchingService } from './admin-volunteer-matching.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('AdminVolunteerMatchingService', () => {
     let service: AdminVolunteerMatchingService;
+    let prisma: PrismaService;
 
-    beforeEach(() => {
-        service = new AdminVolunteerMatchingService();
+    const mockEvents = [
+        { id: '1', name: 'Event A', eventDate: '2025-10-20', requiredSkills: ['First Aid'], location: 'City Center', urgency: 'High' },
+        { id: '2', name: 'Event B', eventDate: '2025-10-21', requiredSkills: ['Teamwork'], location: 'Suburbs', urgency: 'Medium' },
+    ];
+
+    const mockUsers = [
+        { userId: 'u1', fullName: 'Alice', skills: ['First Aid'], availability: ['2025-10-20'], location: 'City Center' },
+        { userId: 'u2', fullName: 'Bob', skills: ['Teamwork'], availability: ['2025-10-21'], location: 'Suburbs' },
+    ];
+
+    const mockVolunteerHistory = [
+        { userId: 'u1', eventId: '2', status: 'assigned' },
+    ];
+
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+        providers: [
+            AdminVolunteerMatchingService,
+            {
+            provide: PrismaService,
+            useValue: {
+                event: { findMany: jest.fn() },
+                userProfile: { findMany: jest.fn() },
+                volunteerHistory: { findMany: jest.fn(), findFirst: jest.fn(), create: jest.fn() },
+            },
+            },
+        ],
+        }).compile();
+
+        service = module.get<AdminVolunteerMatchingService>(AdminVolunteerMatchingService);
+        prisma = module.get<PrismaService>(PrismaService);
+
+        // Default mocks
+        (prisma.event.findMany as jest.Mock).mockResolvedValue(mockEvents);
+        (prisma.userProfile.findMany as jest.Mock).mockResolvedValue(mockUsers);
+        (prisma.volunteerHistory.findMany as jest.Mock).mockResolvedValue(mockVolunteerHistory);
+        (prisma.volunteerHistory.findFirst as jest.Mock).mockResolvedValue(null);
+        (prisma.volunteerHistory.create as jest.Mock).mockImplementation(async ({ data }) => data);
+
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
     it('should be defined', () => {
@@ -12,267 +56,105 @@ describe('AdminVolunteerMatchingService', () => {
     });
 
     it('should calculate match points correctly', () => {
-        const user: any = {
-            id: 1,
-            name: 'John Smith',
-            skills: ['First Aid', 'Teamwork'],
-            availability: ['2025-10-20', '2025-10-22'],
-            location: 'City Center',
-        };
-
-        const event: any = {
-            eventId: 1,
-            eventName: 'Blood Drive',
-            requiredSkills: ['First Aid', 'Organization'],
-            date: '2025-10-20',
-            location: 'City Center',
-            urgency: 'High',
-        };
+        const user = mockUsers[0];
+        const event = mockEvents[0];
 
         const points = (service as any).calculateMatchPoints(user, event);
         expect(points).toBeGreaterThan(0);
     });
 
-    it('should give fewer points when locations do not match', () => {
-        const user: any = {
-            id: 2,
-            name: 'Alice',
-            skills: ['Teamwork'],
-            availability: ['2025-11-01'],
-            location: 'Suburbs',
-        };
-        const event: any = {
-            eventId: 3,
-            eventName: 'City Cleanup',
-            requiredSkills: ['Teamwork'],
-            date: '2025-11-01',
-            location: 'City Center',
-            urgency: 'Low',
-        };
-      
-        const points = (service as any).calculateMatchPoints(user, event);
-        expect(points).toBeLessThan(10); 
-    });
+    it('should get suggested matches correctly', async () => {
+        const matches = await service.getSuggestedMatches();
 
-    it('should return suggested matches', () => {
-        const matches = service.getSuggestedMatches();
-    
-        expect(matches.length).toBeGreaterThan(0);
+        expect(prisma.event.findMany).toHaveBeenCalled();
+        expect(prisma.userProfile.findMany).toHaveBeenCalled();
+        expect(prisma.volunteerHistory.findMany).toHaveBeenCalled();
+        expect(matches.length).toBe(mockUsers.length);
         expect(matches[0]).toHaveProperty('volunteerId');
         expect(matches[0]).toHaveProperty('suggestedEvent');
     });
 
-    it('should assign volunteer to event successfully', () => {
-        const response = service.assignVolunteerToEvent(1, 1);
-
-        expect(response.message).toBe('Volunteer assigned successfully.');
-        expect(response.record).toMatchObject({
-            userId: 1,
-            eventId: 1,
-            status: 'assigned',
-        });
-    });
-    
-    it('should update status if volunteer already assigned', () => {
-        service.assignVolunteerToEvent(1, 1);
-        const response = service.assignVolunteerToEvent(1, 1);
-
-        expect(response.message).toBe('Volunteer already matched, status updated.');
-        expect(response.record?.status).toBe('assigned');
-    });
-
-    it('should remove volunteer after assignment', () => {
-        const initialCount = (service as any).users.length;
-        service.assignVolunteerToEvent(1, 1);
-        const afterCount = (service as any).users.length;
-
-        expect(afterCount).toBeLessThan(initialCount);
-    });
-
-    it('should handle assignment when volunteer is not in the list', () => {
-        const response = service.assignVolunteerToEvent(999, 1); 
-        expect(response.message).toBe('Volunteer assigned successfully.');
+    it('should handle "No suitable match"', async () => {
+        const mockUser = { 
+          userId: 'u3', 
+          fullName: 'Charlie', 
+          skills: [], 
+          availability: [], 
+          city: '', 
+          state: '', 
+          zipcode: '' 
+        };
       
-        expect((service as any).volunteerHistory.some(vh => vh.userId === 999 && vh.eventId === 1)).toBe(true);
-    });  
-
-    it('should return "No suitable match" when maxPoints is 0', () => {
-        const service = new AdminVolunteerMatchingService();
+        const mockEvent = { 
+          id: '10', 
+          name: 'Event X', 
+          requiredSkills: [], 
+          location: 'Some Place', // Not online/virtual
+          eventDate: '2025-11-01', 
+          urgency: 'Low' 
+        };
       
-        (service as any).users = [{ id: 1, name: 'Alice', skills: [], availability: [], location: '' }];
-        (service as any).events = [{ eventId: 1, eventName: 'Test', requiredSkills: [], date: '', location: '', urgency: 'Low' }];
+        (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([mockUser]);
+        (prisma.event.findMany as jest.Mock).mockResolvedValue([mockEvent]);
       
-        const matches = service.getSuggestedMatches();
+        // Force points to 0 so it triggers "No suitable match"
+        jest.spyOn(service as any, 'calculateMatchPoints').mockReturnValue(0);
+      
+        const matches = await service.getSuggestedMatches();
         expect(matches[0].suggestedEvent).toBe('No suitable match');
         expect(matches[0].suggestedEventId).toBeNull();
-    });   
-
-    it('should select event with higher urgency when points tie', () => {
-        const user: any = {
-          id: 5,
-          name: 'Diana',
-          skills: ['First Aid'],
-          availability: ['2025-10-20', '2025-10-21'],
-          location: 'City Center',
-        };
-      
-        const event1: any = {
-          eventId: 1,
-          eventName: 'Event A',
-          requiredSkills: ['First Aid'],
-          date: '2025-10-20',
-          location: 'City Center',
-          urgency: 'Medium',
-        };
-      
-        const event2: any = {
-          eventId: 2,
-          eventName: 'Event B',
-          requiredSkills: ['First Aid'],
-          date: '2025-10-21',
-          location: 'City Center',
-          urgency: 'High', 
-        };
-      
-        (service as any).users = [user];
-        (service as any).events = [event1, event2];
-      
-        const matches = service.getSuggestedMatches();
-        expect(matches[0].suggestedEvent).toBe('Event B'); 
-    });
-
-    it('should select event with earlier date when points and urgency tie', () => {
-        const user: any = {
-          id: 6,
-          name: 'Ethan',
-          skills: ['First Aid'],
-          availability: ['2025-10-20', '2025-10-21'],
-          location: 'City Center',
-        };
-      
-        const event1: any = {
-          eventId: 3,
-          eventName: 'Event C',
-          requiredSkills: ['First Aid'],
-          date: '2025-10-22', 
-          location: 'City Center',
-          urgency: 'High',
-        };
-      
-        const event2: any = {
-          eventId: 4,
-          eventName: 'Event D',
-          requiredSkills: ['First Aid'],
-          date: '2025-10-20', 
-          location: 'City Center',
-          urgency: 'High',
-        };
-      
-        (service as any).users = [user];
-        (service as any).events = [event1, event2];
-      
-        const matches = service.getSuggestedMatches();
-        expect(matches[0].suggestedEvent).toBe('Event D'); 
-    }); 
-
-    it('should keep current bestMatch when points tie, urgency tie, but current event has later date', () => {
-        const user: any = {
-            id: 13,
-            name: 'Later Date Test',
-            skills: ['First Aid'],
-            availability: ['2025-10-20', '2025-10-22'],
-            location: 'City Center',
-        };
-    
-        const event1: any = {
-            eventId: 10,
-            eventName: 'Event Earlier',
-            requiredSkills: ['First Aid'],
-            date: '2025-10-20', // earlier date - should be selected first
-            location: 'City Center',
-            urgency: 'High',
-        };
-    
-        const event2: any = {
-            eventId: 11,
-            eventName: 'Event Later',
-            requiredSkills: ['First Aid'],
-            date: '2025-10-22', // later date - should not replace event1
-            location: 'City Center',
-            urgency: 'High', // same urgency
-        };
-    
-        (service as any).users = [user];
-        (service as any).events = [event1, event2];
-    
-        const matches = service.getSuggestedMatches();
-        
-        // event1 should win because it has the earlier date
-        expect(matches[0].suggestedEvent).toBe('Event Earlier');
-    });
-
-    it('should replace bestMatch when urgency ties but event has earlier date', () => {
-        const user: any = {
-            id: 21,
-            name: 'Earlier Date Tie Test',
-            skills: ['Cooking'],
-            availability: ['2025-11-10', '2025-11-15'],
-            location: 'Community Center',
-        };
-    
-        const event1: any = {
-            eventId: 23,
-            eventName: 'Later Date Event',
-            requiredSkills: ['Cooking'],
-            date: '2025-11-15',
-            location: 'Community Center',
-            urgency: 'Medium',
-        };
-    
-        const event2: any = {
-            eventId: 24,
-            eventName: 'Earlier Date Event',
-            requiredSkills: ['Cooking'],
-            date: '2025-11-10', // earlier date, same urgency
-            location: 'Community Center',
-            urgency: 'Medium',
-        };
-    
-        (service as any).users = [user];
-        (service as any).events = [event1, event2];
-    
-        const matches = service.getSuggestedMatches();
-        expect(matches[0].suggestedEvent).toBe('Earlier Date Event'); // must replace
-    });
-
-    it('should replace bestMatch when urgency is higher but points are equal', () => {
-        const service = new AdminVolunteerMatchingService();
-      
-        const user: any = { id: 1, name: 'Tester' };
-      
-        const eventMedium: any = {
-          eventId: 10,
-          eventName: 'Medium Urgency Event',
-          urgency: 'Medium',
-        };
-      
-        const eventHigh: any = {
-          eventId: 11,
-          eventName: 'High Urgency Event',
-          urgency: 'High',
-        };
-      
-        // simulate equal scoring
-        (service as any).users = [user];
-        (service as any).events = [eventMedium, eventHigh];
-      
-        // mock scoring so both events have equal points
-        jest.spyOn(service as any, 'calculateMatchPoints').mockReturnValue(10);
-      
-        // run matching
-        const matches = service.getSuggestedMatches();
-      
-        // should choose the high urgency one
-        expect(matches[0].suggestedEvent).toBe('High Urgency Event');
       });
+      
+      
+    
+
+    it('should assign volunteer to event successfully', async () => {
+        const response = await service.assignVolunteerToEvent('u2', '1');
+    
+        expect(prisma.volunteerHistory.findFirst).toHaveBeenCalledWith({ where: { userId: 'u2', eventId: '1' } });
+        expect(prisma.volunteerHistory.create).toHaveBeenCalled();
+        expect(response.message).toBe('Volunteer assigned successfully.');
+        expect(response.record).toMatchObject({ userId: 'u2', eventId: '1', status: 'Matched' });
+    });
+    
+
+    it('should handle already assigned volunteer', async () => {
+        (prisma.volunteerHistory.findFirst as jest.Mock).mockResolvedValue({
+        userId: 'u2',
+        eventId: '1',
+        status: 'Matched', 
+        });
+    
+        const response = await service.assignVolunteerToEvent('u2', '1');
+    
+        expect(response.message).toBe('Volunteer already matched, status updated.');
+        expect(response.record).toMatchObject({ userId: 'u2', eventId: '1', status: 'Matched' }); // <- change here
+    });
+    
+
+    it('should prioritize higher urgency when points tie', async () => {
+        const user = { userId: 'u4', fullName: 'Diana', skills: ['Skill'], availability: ['2025-10-20'], location: 'City' };
+        const eventHigh = { id: 'h1', name: 'High Urgency', requiredSkills: ['Skill'], location: 'City', eventDate: '2025-10-20', urgency: 'High' };
+        const eventLow = { id: 'l1', name: 'Low Urgency', requiredSkills: ['Skill'], location: 'City', eventDate: '2025-10-20', urgency: 'Low' };
+
+        (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([user]);
+        (prisma.event.findMany as jest.Mock).mockResolvedValue([eventLow, eventHigh]);
+        jest.spyOn(service as any, 'calculateMatchPoints').mockReturnValue(10);
+
+        const matches = await service.getSuggestedMatches();
+        expect(matches[0].suggestedEvent).toBe('High Urgency');
+    });
+
+    it('should pick earlier date when points and urgency tie', async () => {
+        const user = { userId: 'u5', fullName: 'Ethan', skills: ['Skill'], availability: ['2025-10-20'], location: 'City' };
+        const event1 = { id: 'e1', name: 'Later Event', requiredSkills: ['Skill'], location: 'City', eventDate: '2025-10-22', urgency: 'High' };
+        const event2 = { id: 'e2', name: 'Earlier Event', requiredSkills: ['Skill'], location: 'City', eventDate: '2025-10-20', urgency: 'High' };
+
+        (prisma.userProfile.findMany as jest.Mock).mockResolvedValue([user]);
+        (prisma.event.findMany as jest.Mock).mockResolvedValue([event1, event2]);
+        jest.spyOn(service as any, 'calculateMatchPoints').mockReturnValue(10);
+
+        const matches = await service.getSuggestedMatches();
+        expect(matches[0].suggestedEvent).toBe('Earlier Event');
+    });
 });
