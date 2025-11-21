@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { MailerService } from '@nestjs-modules/mailer';
-import * as nodemailer from 'nodemailer';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 
@@ -13,7 +13,8 @@ export class AuthService {
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
-        private mailerService: MailerService,
+        private emailService: EmailService,
+        private configService: ConfigService,
     ) {}
 
     async signUp(fullName: string, email: string, pass: string): Promise<{ message: string }> {
@@ -42,17 +43,20 @@ export class AuthService {
 
         const verificationUrl = `http://localhost:3001/auth/verify-email?token=${verificationToken}`;
 
-        const info = await this.mailerService.sendMail({
+        const templateId = this.configService.get<string>('SENDGRID_VERIFICATION_TEMPLATE_ID');
+        if (!templateId) {
+            throw new InternalServerErrorException('SENDGRID_VERIFICATION_TEMPLATE_ID not found');
+        }
+
+        await this.emailService.send({
             to: user.email,
-            subject: 'Welcome to our app! Please verify your email',
-            template: './verification', // `.pug` extension is appended automatically
-            context: {
+            from: 'matthewcg832@gmail.com', // Replace with your verified sender
+            templateId: templateId,
+            dynamicTemplateData: {
                 name: user.fullName,
                 url: verificationUrl,
             },
         });
-
-        this.logger.log(`Ethereal message sent: ${nodemailer.getTestMessageUrl(info)}`);
 
         return { message: 'User successfully registered. Please check your email to verify your account.' };
     }
