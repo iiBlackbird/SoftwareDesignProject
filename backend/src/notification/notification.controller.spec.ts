@@ -88,7 +88,7 @@ describe('NotificationController', () => {
 
   describe('getUserNotifications', () => {
     it('should return user notifications with default pagination', async () => {
-      const result = await controller.getUserNotifications(mockRequest as any);
+      const result = await controller.getUserNotifications(mockRequest as any, undefined, 20, 1);
 
       expect(service.getUserNotifications).toHaveBeenCalledWith('user1', {
         unreadOnly: false,
@@ -113,7 +113,7 @@ describe('NotificationController', () => {
     it('should handle service errors gracefully', async () => {
       mockNotificationService.getUserNotifications.mockRejectedValue(new Error('Service error'));
 
-      await expect(controller.getUserNotifications(mockRequest as any)).rejects.toThrow('Service error');
+      await expect(controller.getUserNotifications(mockRequest as any, undefined, 20, 1)).rejects.toThrow('Service error');
     });
   });
 
@@ -196,21 +196,21 @@ describe('NotificationController', () => {
 
   describe('query parameter handling', () => {
     it('should convert unreadOnly string to boolean correctly', async () => {
-      await controller.getUserNotifications(mockRequest as any, 'true');
+      await controller.getUserNotifications(mockRequest as any, 'true', 20, 1);
       expect(service.getUserNotifications).toHaveBeenCalledWith('user1', {
         unreadOnly: true,
         limit: 20,
         page: 1,
       });
 
-      await controller.getUserNotifications(mockRequest as any, 'false');
+      await controller.getUserNotifications(mockRequest as any, 'false', 20, 1);
       expect(service.getUserNotifications).toHaveBeenCalledWith('user1', {
         unreadOnly: false,
         limit: 20,
         page: 1,
       });
 
-      await controller.getUserNotifications(mockRequest as any, undefined);
+      await controller.getUserNotifications(mockRequest as any, undefined, 20, 1);
       expect(service.getUserNotifications).toHaveBeenCalledWith('user1', {
         unreadOnly: false,
         limit: 20,

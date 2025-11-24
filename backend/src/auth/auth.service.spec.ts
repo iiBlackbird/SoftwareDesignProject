@@ -5,6 +5,9 @@ import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
+
 // Mock the bcrypt module
 jest.mock('bcrypt', () => ({
   ...jest.requireActual('bcrypt'),
@@ -25,15 +28,34 @@ const mockJwtService = {
   sign: jest.fn(),
 };
 
+// Mock the EmailService
+const mockEmailService = {
+  send: jest.fn(),
+};
+
+// Mock the ConfigService
+const mockConfigService = {
+  get: jest.fn(),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
   beforeEach(async () => {
+    mockConfigService.get.mockImplementation((key: string) => {
+      if (key === 'SENDGRID_VERIFICATION_TEMPLATE_ID') {
+        return 'd-12345';
+      }
+      return null;
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: EmailService, useValue: mockEmailService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
