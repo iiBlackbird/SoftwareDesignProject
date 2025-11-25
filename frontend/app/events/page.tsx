@@ -15,6 +15,7 @@ interface Event {
   createdAt: string;
   updatedAt: string;
 }
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function EventsPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function EventsPage() {
         setLoading(true);
         setError(null);
         
-        const response = await fetch('/api/events');
+        const response = await fetch(`${API_URL}/events`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch events: ${response.statusText}`);

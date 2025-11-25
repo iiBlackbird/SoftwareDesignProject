@@ -17,6 +17,7 @@ const skillsList = [
 ];
 
 const urgencies = ["Low", "Normal", "High", "Critical"] as const;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 type Urgency = (typeof urgencies)[number];
 
@@ -54,7 +55,7 @@ export default function NewEventPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/events', {
+      const response = await fetch(`${API_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

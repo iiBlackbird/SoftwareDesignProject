@@ -17,6 +17,7 @@ const skillsList = [
 ];
 
 const urgencies = ["Low", "Normal", "High", "Critical"] as const;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 type Urgency = (typeof urgencies)[number];
 
@@ -58,7 +59,7 @@ export default function EditEventPage() {
         setError(null);
         
         // TODO: Replace with actual API endpoint
-        const response = await fetch(`/api/events/${eventId}`);
+        const response = await fetch(`${API_URL}/events/${eventId}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch event: ${response.statusText}`);
@@ -111,7 +112,7 @@ export default function EditEventPage() {
       setError(null);
       
       // TODO: Replace with actual API endpoint
-      const response = await fetch(`/api/events/${eventId}`, {
+      const response = await fetch(`${API_URL}/events/${eventId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
