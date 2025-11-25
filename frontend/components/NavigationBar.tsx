@@ -106,7 +106,7 @@ export default function NavigationBar() {
               Notifications
             </Link>
             <Link 
-              href="/volunteer/volunteer-matching" 
+              href="/events" 
               className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
               My Events
