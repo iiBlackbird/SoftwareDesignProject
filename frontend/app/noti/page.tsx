@@ -5,19 +5,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import NavigationBar from '../../components/NavigationBar';
 
-
-// Added proper TypeScript interfaces for better type safety
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-interface NotificationResponse {
-  notifications: any[];
-  counts: NotificationCounts;
-}
-
 // Types
 interface Notification {
   id: string;
@@ -49,23 +36,6 @@ interface NotificationCounts {
 //const API_BASE_URL = 'http://localhost:3001';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-
-// Utility function to handle API errors 
-const handleApiError = (error: any): string => {
-  if (error.message?.includes('Unauthorized')) {
-    localStorage.removeItem('token');
-    window.location.href = '/signin';
-    return 'Session expired. Please login again.';
-  }
-  if (error.message?.includes('Failed to fetch')) {
-    return 'Network error. Please check your connection.';
-  }
-  if (error.message?.includes('No authentication token')) {
-    return 'Please login to view notifications.';
-  }
-  return error.message || 'An unexpected error occurred';
-};
-
 // Helper function to format time
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -78,12 +48,12 @@ const formatTime = (dateString: string) => {
 };
 
 const notificationAPI = {
-  // Fetch notifications for a user with proper return type
+  // Fetch notifications for a user
   async getNotifications(options?: { 
     unreadOnly?: boolean; 
     limit?: number; 
     page?: number; 
-  }): Promise<ApiResponse<NotificationResponse>> {
+  }): Promise<any> {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -322,44 +292,6 @@ const getFallbackCounts = (notifications: Notification[]): NotificationCounts =>
   reminder: notifications.filter((n: Notification) => n.type === 'reminder').length,
 });
 
-
-// Skeleton component for loading state
-function NotificationSkeleton() {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-      <div className="flex items-start space-x-4">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-        <div className="flex-1 space-y-3">
-          <div className="flex justify-between">
-            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
-            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/6"></div>
-          </div>
-          <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
-          <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
-          <div className="flex space-x-3 mt-2">
-            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/6"></div>
-            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/6"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Filter Sidebar Skeleton
-function FilterSidebarSkeleton() {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-fit animate-pulse">
-      <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-4"></div>
-      <div className="space-y-2">
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="h-12 bg-gray-300 dark:bg-gray-600 rounded"></div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Notification Item Component
 function NotificationItem({ notification, onMarkAsRead }: { 
   notification: Notification; 
@@ -532,21 +464,59 @@ export default function NotificationsPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-// retry loading mech
   const [retryCount, setRetryCount] = useState(0);
 
-  // Authentication check
+  // Enhanced authentication check - validates token with backend
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '/signin';
-      return;
-    }
-    setIsAuthenticated(true);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      console.log('Auth check - Token exists:', !!token);
+      
+      if (!token) {
+        console.log('No token found - redirecting to login');
+        window.location.href = '/signin';
+        return;
+      }
+      
+      // Verify token is actually valid by making API call
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.status === 401) {
+          console.log('Token invalid - redirecting to login');
+          localStorage.removeItem('token');
+          window.location.href = '/signin';
+          return;
+        }
+        
+        if (!response.ok) {
+          throw new Error('Token validation failed');
+        }
+        
+        console.log('Token valid - user authenticated');
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.log('Token validation error:', error);
+        localStorage.removeItem('token');
+        window.location.href = '/signin';
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  // Load notifications from backend 
+  // Debug token on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('Token in localStorage:', token);
+    console.log('API_BASE_URL:', API_BASE_URL);
+  }, []);
+
+  // Load notifications from backend
   const loadNotifications = useCallback(async (retry = false) => {
     if (!isAuthenticated) return;
 
@@ -554,7 +524,6 @@ export default function NotificationsPage() {
       setError(null);
       setLoading(true);
       
-      // retry count
       if (retry) {
         setRetryCount(prev => prev + 1);
       }
@@ -581,19 +550,14 @@ export default function NotificationsPage() {
         
         setNotifications(transformedNotifications);
         setNotificationCounts(response.data.counts);
-        
-       
         setRetryCount(0);
       }
     } catch (err: any) {
       console.error('Error loading notifications:', err);
+      setError(err.message || 'Failed to load notifications');
       
-      
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
-      
-      
-      if (retryCount < 3 && errorMessage.includes('Network error')) {
+      // Auto-retry logic for network errors
+      if (retryCount < 3 && err.message?.includes('Network error')) {
         console.log(`Auto-retrying... Attempt ${retryCount + 1}/3`);
         setTimeout(() => loadNotifications(true), 2000);
         return;
@@ -623,8 +587,7 @@ export default function NotificationsPage() {
     }
   }, [loadNotifications, isAuthenticated]);
 
-  
-  // Poll for new notifications every 30 seconds when tab is visible
+  // Real-time updates - poll for new notifications
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -654,11 +617,8 @@ export default function NotificationsPage() {
         }));
       }
     } catch (err: any) {
-      
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
-      
-      // Update UI optimistically even if API call fails
+      setError(err.message || 'Failed to mark notification as read');
+      // Update UI optimistically
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === id ? { ...notification, read: true } : notification
@@ -686,11 +646,8 @@ export default function NotificationsPage() {
         }));
       }
     } catch (err: any) {
-      
-      const errorMessage = handleApiError(err);
-      setError(errorMessage);
-      
-      // Update UI optimistically even if API call fails
+      setError(err.message || 'Failed to mark all notifications as read');
+      // Update UI optimistically
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       );
@@ -722,40 +679,13 @@ export default function NotificationsPage() {
     );
   }
 
-  
-  if (loading && notifications.length === 0) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <NavigationBar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Skeleton Sidebar */}
-            <div className="lg:w-1/4">
-              <FilterSidebarSkeleton />
-            </div>
-            
-            {/* Skeleton Notifications List */}
-            <div className="lg:w-3/4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                {/* Header Skeleton */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 animate-pulse">
-                  <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-4 sm:mb-0"></div>
-                  <div className="flex space-x-3">
-                    <div className="h-10 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
-                    <div className="h-10 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-                  </div>
-                </div>
-                
-                {/* Notification Skeletons */}
-                <div className="space-y-4">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <NotificationSkeleton key={i} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <i className="fas fa-spinner animate-spin text-4xl text-green-600 mb-4"></i>
+          <p className="text-gray-600 dark:text-gray-400">Loading notifications...</p>
+        </div>
       </div>
     );
   }
@@ -771,30 +701,18 @@ export default function NotificationsPage() {
       <NavigationBar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Alert with Retry Option */}
+        {/* Error Alert */}
         {error && (
           <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <i className="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
-                <p className="text-yellow-700 dark:text-yellow-300 text-sm">{error}</p>
-              </div>
-              <div className="flex space-x-2">
-                {error.includes('Network error') && retryCount < 3 && (
-                  <button 
-                    onClick={() => loadNotifications(true)}
-                    className="text-yellow-700 dark:text-yellow-300 text-sm font-medium hover:text-yellow-800 dark:hover:text-yellow-200"
-                  >
-                    Retry
-                  </button>
-                )}
-                <button 
-                  onClick={() => setError(null)}
-                  className="text-yellow-500 hover:text-yellow-700 ml-2"
-                >
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
+            <div className="flex items-center">
+              <i className="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+              <p className="text-yellow-700 dark:text-yellow-300 text-sm">{error}</p>
+              <button 
+                onClick={() => setError(null)}
+                className="ml-auto text-yellow-500 hover:text-yellow-700"
+              >
+                <i className="fas fa-times"></i>
+              </button>
             </div>
           </div>
         )}
@@ -818,12 +736,6 @@ export default function NotificationsPage() {
                   {notificationCounts.unread > 0 && (
                     <span className="ml-2 bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded-full">
                       {notificationCounts.unread} unread
-                    </span>
-                  )}
-                  {/* ==================== ENHANCEMENT 3: SHOW RETRY STATUS ==================== */}
-                  {retryCount > 0 && (
-                    <span className="ml-2 bg-yellow-100 text-yellow-800 text-sm font-medium px-2 py-1 rounded-full">
-                      Retry {retryCount}/3
                     </span>
                   )}
                 </h1>
