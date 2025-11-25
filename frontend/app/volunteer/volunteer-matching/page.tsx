@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import NavigationBar from "../../../components/NavigationBar";
 
+function formatLocalDate(dateString: string) {
+  const [year, month, day] = dateString.split("T")[0].split("-");
+  return `${month}/${day}/${year}`; // MM/DD/YYYY
+}
+
 type Match = {
   eventId: string;
   eventName: string;
@@ -18,9 +23,10 @@ export default function VolunteerMatchingPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken"); //  use JWT
+    const token = localStorage.getItem("accessToken"); // use JWT
     if (!token) {
       setError("You must be logged in to view your matched opportunities.");
       setLoading(false);
@@ -29,17 +35,17 @@ export default function VolunteerMatchingPage() {
 
     async function fetchMatches() {
       try {
-        //const res = await fetch(`http://localhost:3000/user/volunteer-matching`, {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/volunteer-matching`, {
-
-          headers: { Authorization: `Bearer ${token}` }, // send JWT
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch matches");
         const data: Match[] = await res.json();
+
+        // ✅ REPLACE DATE FORMAT HERE
         setMatches(
           data.map((m) => ({
             ...m,
-            eventDate: new Date(m.eventDate).toLocaleDateString(), // format date
+            eventDate: formatLocalDate(m.eventDate),
           }))
         );
       } catch (err) {
@@ -55,24 +61,28 @@ export default function VolunteerMatchingPage() {
 
   async function handleEnroll(eventId: string) {
     const token = localStorage.getItem("accessToken");
-    if (!token) return alert("You must be logged in to enroll.");
+    if (!token) {
+      setError("You must be logged in to enroll.");
+      return;
+    }
 
     try {
-      //const res = await fetch("http://localhost:3000/user/volunteer-matching/enroll", {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/volunteer-matching/enroll`, {
         method: "PATCH",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // send JWT
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ eventId }), // userId now comes from JWT
+        body: JSON.stringify({ eventId }),
       });
+
       if (!res.ok) throw new Error("Failed to enroll in event");
 
       setMatches((prev) => prev.filter((m) => m.eventId !== eventId));
+      setMessage("You have been enrolled!");
     } catch (err) {
       console.error(err);
-      alert("Failed to enroll in event. Please try again.");
+      setError("Failed to enroll in event. Please try again.");
     }
   }
 
@@ -91,6 +101,13 @@ export default function VolunteerMatchingPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        {message && (
+          <div className="mb-6 p-4 bg-green-100 text-green-800 border border-green-300 rounded-lg">
+            {message}
+          </div>
+        )}
+
         {loading ? (
           <p className="p-6 text-gray-600 dark:text-gray-300">Loading matched opportunities...</p>
         ) : error ? (

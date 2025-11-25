@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import NavigationBar from '../../../components/NavigationBar';
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 type VolunteerMatch = {
   volunteerId: string;
   volunteerName: string;
@@ -22,29 +23,27 @@ export default function VolunteerMatchingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ ADD THIS
+  const [message, setMessage] = useState<string>("");
+
   useEffect(() => {
     async function fetchData() {
       try {
-        //  Fetch suggested matches
         const resMatches = await fetch(`${API_URL}/admin/volunteer-matching`);
         if (!resMatches.ok) throw new Error("Failed to fetch matches");
         const matchesData: VolunteerMatch[] = await resMatches.json();
         setMatches(matchesData);
 
-        // Initialize assignments
         const initialAssignments: { [id: string]: string | null } = {};
         matchesData.forEach((v) => {
           initialAssignments[v.volunteerId] = v.suggestedEventId;
         });
         setAssignments(initialAssignments);
 
-        // Fetch all upcoming events
         const resEvents = await fetch(`${API_URL}/admin/events/upcoming`);
         if (!resEvents.ok) throw new Error("Failed to fetch events");
 
         const eventsData = await resEvents.json();
-        // Use the array property returned by your backend
-        //setEvents(eventsData.events || []); 
         setEvents(eventsData || []);
 
         setLoading(false);
@@ -65,7 +64,7 @@ export default function VolunteerMatchingPage() {
   const handleAssign = async (volunteerId: string) => {
     const eventId = assignments[volunteerId];
     if (!eventId) {
-      alert("Please select a valid event to assign.");
+      setError("Please select a valid event to assign.");
       return;
     }
 
@@ -78,16 +77,19 @@ export default function VolunteerMatchingPage() {
           body: JSON.stringify({ volunteerId, eventId }),
         }
       );
+
       const data = await res.json();
 
       if (data.message.toLowerCase().includes("successfully")) {
         setMatches((prev) => prev.filter((v) => v.volunteerId !== volunteerId));
       }
 
-      alert(data.message);
+      // ✅ REPLACE ALERT WITH SUCCESS MESSAGE
+      setMessage(data.message);
+
     } catch (err) {
       console.error(err);
-      alert("Failed to assign volunteer.");
+      setError("Failed to assign volunteer.");
     }
   };
 
@@ -107,10 +109,23 @@ export default function VolunteerMatchingPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        {/* ✅ SUCCESS MESSAGE */}
+        {message && (
+          <div className="mb-6 p-4 bg-green-100 text-green-800 border border-green-300 rounded-lg">
+            {message}
+          </div>
+        )}
+
+        {/* ERROR MESSAGE */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 text-red-800 border border-red-300 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {loading ? (
           <p className="text-gray-700 dark:text-gray-300">Loading matches...</p>
-        ) : error ? (
-          <p className="text-red-600 dark:text-red-400">{error}</p>
         ) : (
           <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -130,6 +145,7 @@ export default function VolunteerMatchingPage() {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {matches.map((volunteer) => (
                   <tr
@@ -169,6 +185,7 @@ export default function VolunteerMatchingPage() {
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         )}
@@ -176,3 +193,4 @@ export default function VolunteerMatchingPage() {
     </div>
   );
 }
+

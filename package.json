@@ -2,9 +2,11 @@
   "dependencies": {
     "@nestjs/config": "^4.0.2",
     "csv-writer": "^1.6.0",
+    "date-fns": "^4.1.0",
     "json2csv": "^6.0.0-alpha.2",
     "jspdf": "^3.0.4",
-    "pdfkit": "^0.17.2"
+    "pdfkit": "^0.17.2",
+    "react-datepicker": "^8.9.0"
   },
   "devDependencies": {
     "@types/pdfkit": "^0.17.3"

@@ -231,6 +231,13 @@ export default function NavigationBar() {
                     Create Event
                   </Link>
                   <Link
+                    href="/events"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setIsOrganizerDropdownOpen(false)}
+                  >
+                    Edit Event
+                  </Link>
+                  <Link
                     href="/admin/volunteer-matching"
                     className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setIsOrganizerDropdownOpen(false)}

@@ -59,12 +59,13 @@ const states = [
 const skillsList = [
   "Event Planning",
   "Teaching",
-  "Medical Assistance",
+  "First Aid",
   "Fundraising",
   "Cooking",
-  "Transportation",
-  "Community Outreach",
-  "Childcare",
+  "Logistics",
+  "Photography",
+  "Driving",
+  "Social Media",
 ];
 
 export default function UserProfile() {
@@ -95,9 +96,7 @@ export default function UserProfile() {
       return;
     }
 
-    //fetch("http://localhost:3000/user/profile", {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
-
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -162,12 +161,19 @@ export default function UserProfile() {
 
   const handleAvailabilityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const date = e.target.value;
+    
+    // FIX: Only add date if user actually selected one (not empty from month navigation)
+    if (!date) return;
+    
     setFormData((prev) => ({
       ...prev,
       availability: prev.availability.includes(date)
         ? prev.availability.filter((d) => d !== date)
         : [...prev.availability, date],
     }));
+
+    // FIX: Clear the input after selection
+    e.target.value = '';
   };
 
   // Submit form
@@ -185,7 +191,6 @@ export default function UserProfile() {
     }
 
     try {
-      //const res = await fetch("http://localhost:3000/user/profile", {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
         method: "POST",
         headers: {
@@ -195,7 +200,7 @@ export default function UserProfile() {
         body: JSON.stringify(formData),
       });
 
-      const text = await res.text(); // avoid JSON parsing issues
+      const text = await res.text();
       if (!res.ok) {
         throw new Error(text || "Failed to update profile");
       }
@@ -412,4 +417,3 @@ export default function UserProfile() {
     </div>
   );
 }
-
