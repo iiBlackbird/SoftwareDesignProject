@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, HttpStatus, HttpException } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, HttpStatus, HttpException } from '@nestjs/common';
 import { EventService } from './event.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -28,9 +28,14 @@ export class EventController {
   }
 
   @Get()
-  async getAllEvents() {
+  async getAllEvents(@Query('userId') userId?: string) {
     try {
-      const result = await this.eventService.getAllEvents();
+      let result;
+      if (userId) {
+        result = await this.eventService.getEventsByUser(userId);
+      } else {
+        result = await this.eventService.getAllEvents();
+      }
       return {
         statusCode: HttpStatus.OK,
         ...result,

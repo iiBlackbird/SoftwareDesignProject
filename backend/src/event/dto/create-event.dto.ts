@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsArray, IsEnum, IsDateString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsArray, IsEnum, IsDateString, MaxLength, IsOptional } from 'class-validator';
 
 export enum EventUrgency {
   LOW = 'Low',
@@ -33,4 +33,8 @@ export class CreateEventDto {
   @IsNotEmpty()
   @IsDateString()
   eventDate: string;
+
+  @IsOptional()
+  @IsString()
+  createdById?: string;
 }
