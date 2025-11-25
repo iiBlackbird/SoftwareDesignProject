@@ -86,7 +86,7 @@ export class AdminVolunteerMatchingService {
             vh.userId === user.userId &&
             ['Matched', 'Enrolled'].includes(vh.status)
       );
-      if (userAlreadyAssigned) continue; // skip showing this user again
+      //if (userAlreadyAssigned) continue; // skip showing this user again
 
       let bestMatch: any = null;
       let maxPoints = -1;

@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 describe('UserVolunteerMatchingService', () => {
   let service: UserVolunteerMatchingService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: PrismaService & { volunteerHistory: any };
 
   beforeEach(() => {
     prisma = {
@@ -39,7 +39,7 @@ describe('UserVolunteerMatchingService', () => {
         },
       ];
 
-      prisma.volunteerHistory.findMany.mockResolvedValue(mockRecord);
+      (prisma.volunteerHistory.findMany as jest.Mock).mockResolvedValue(mockRecord);
 
       const result = await service.getMatchedEventsForUser('u1');
 
@@ -63,7 +63,7 @@ describe('UserVolunteerMatchingService', () => {
     });
 
     it('should return an empty array if no matches found', async () => {
-      prisma.volunteerHistory.findMany.mockResolvedValue([]);
+      (prisma.volunteerHistory.findMany as jest.Mock).mockResolvedValue([]);
       const result = await service.getMatchedEventsForUser('u2');
       expect(result).toEqual([]);
     });
@@ -72,8 +72,8 @@ describe('UserVolunteerMatchingService', () => {
   describe('enrollInEvent', () => {
     it('should update a matched record to Enrolled', async () => {
       const mockRecord = { id: 1, userId: 'u1', eventId: 'e1', status: 'Matched' };
-      prisma.volunteerHistory.findFirst.mockResolvedValue(mockRecord);
-      prisma.volunteerHistory.update.mockResolvedValue({
+      (prisma.volunteerHistory.findFirst as jest.Mock).mockResolvedValue(mockRecord);
+      (prisma.volunteerHistory.update as jest.Mock).mockResolvedValue({
         ...mockRecord,
         status: 'Enrolled',
       });
@@ -91,7 +91,7 @@ describe('UserVolunteerMatchingService', () => {
     });
 
     it('should throw if no matched record exists', async () => {
-      prisma.volunteerHistory.findFirst.mockResolvedValue(null);
+      (prisma.volunteerHistory.findFirst as jest.Mock).mockResolvedValue(null);
       await expect(service.enrollInEvent('u1', 'eX')).rejects.toThrow(
         'No matched record found for this event and user',
       );

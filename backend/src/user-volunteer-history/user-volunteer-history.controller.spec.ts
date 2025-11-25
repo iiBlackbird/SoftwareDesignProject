@@ -60,33 +60,36 @@ describe('UserVolunteerHistoryController', () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it('should call historyService.getUserHistory using GetUserHistoryDto', async () => {
-    const dto = new GetUserHistoryDto();
-    dto.userId = 'user123';
-
-    const req = { user: { id: dto.userId } } as any;
-
+  it('should call historyService.getUserHistory with correct userId', async () => {
+    const req = { user: { id: 'user123' } };
+  
     const mockResponse = [
       {
         id: '1',
         userId: 'user123',
         eventId: 'event1',
-        event: { id: 'event1', name: 'Community Cleanup' },
+        event: {
+          id: 'event1',
+          name: 'Community Cleanup',
+          description: 'Cleaning park',
+          location: 'Santa Monica',
+          requiredSkills: ['Teamwork'],
+          urgency: 'High',
+          eventDate: new Date('2025-10-20'),
+          createdAt: new Date('2025-10-01'),
+          updatedAt: new Date('2025-10-05'),
+        },
       },
     ];
-
-    jest
-      .spyOn(service, 'getUserHistory')
-      .mockResolvedValue(mockResponse);
-
-    const result = await controller.getUserHistory(req);
-    
-    expect(service.getUserHistory).toHaveBeenCalledWith(dto.userId);
-    expect(result).toEqual(mockResponse);
-  });
-
   
-
+    mockUserVolunteerHistoryService.getUserHistory.mockResolvedValue(mockResponse);
+  
+    const result = await controller.getUserHistory(req as any);
+  
+    expect(service.getUserHistory).toHaveBeenCalledWith('user123');
+    expect(result).toEqual(mockResponse);
+  });  
+  
   it('should return an empty array if service returns no history', async () => {
     const req = { user: { id: 'emptyUser' } };    
 
