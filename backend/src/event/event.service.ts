@@ -16,7 +16,7 @@ export class EventService {
   
 
   async createEvent(createEventDto: CreateEventDto) {
-    const { eventName, description, location, requiredSkills, urgency, eventDate } = createEventDto;
+    const { eventName, description, location, requiredSkills, urgency, eventDate, createdById } = createEventDto;
 
     try {
       const event = await this.prisma.event.create({
@@ -27,6 +27,7 @@ export class EventService {
           requiredSkills,
           urgency,
           eventDate: new Date(eventDate),
+          createdById,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -56,6 +57,26 @@ export class EventService {
       };
     } catch (error) {
       throw new Error(`Failed to fetch events: ${error.message}`);
+    }
+  }
+
+  async getEventsByUser(userId: string) {
+    try {
+      const events = await this.prisma.event.findMany({
+        where: {
+          createdById: userId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return {
+        success: true,
+        data: events,
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch user events: ${error.message}`);
     }
   }
 
@@ -125,6 +146,31 @@ export class EventService {
       };
     } catch (error) {
       throw new Error(`Failed to update event: ${error.message}`);
+    }
+  }
+
+  async deleteEvent(id: string) {
+    try {
+      // First check if the event exists
+      const existingEvent = await this.prisma.event.findUnique({
+        where: { id },
+      });
+
+      if (!existingEvent) {
+        throw new Error('Event not found');
+      }
+
+      // Delete the event
+      await this.prisma.event.delete({
+        where: { id },
+      });
+
+      return {
+        success: true,
+        message: 'Event deleted successfully',
+      };
+    } catch (error) {
+      throw new Error(`Failed to delete event: ${error.message}`);
     }
   }
 }
