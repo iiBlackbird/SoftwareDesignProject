@@ -33,8 +33,7 @@ interface NotificationCounts {
 }
 
 // API Service Functions
-//const API_BASE_URL = 'http://localhost:3001';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = '/api';
 
 // Helper function to format time
 const formatTime = (dateString: string) => {
@@ -464,70 +463,25 @@ export default function NotificationsPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
-  // Enhanced authentication check - validates token with backend
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      console.log('Auth check - Token exists:', !!token);
-      
-      if (!token) {
-        console.log('No token found - redirecting to login');
-        window.location.href = '/signin';
-        return;
-      }
-      
-      // Verify token is actually valid by making API call
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        
-        if (response.status === 401) {
-          console.log('Token invalid - redirecting to login');
-          localStorage.removeItem('token');
-          window.location.href = '/signin';
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error('Token validation failed');
-        }
-        
-        console.log('Token valid - user authenticated');
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.log('Token validation error:', error);
-        localStorage.removeItem('token');
-        window.location.href = '/signin';
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  // Debug token on component mount
+  // Authentication check
   useEffect(() => {
     const token = localStorage.getItem('token');
-    console.log('Token in localStorage:', token);
-    console.log('API_BASE_URL:', API_BASE_URL);
+    if (!token) {
+      window.location.href = '/signin';
+      return;
+    }
+    setIsAuthenticated(true);
   }, []);
 
   // Load notifications from backend
-  const loadNotifications = useCallback(async (retry = false) => {
+  const loadNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
 
     try {
       setError(null);
       setLoading(true);
       
-      if (retry) {
-        setRetryCount(prev => prev + 1);
-      }
-
       const response = await notificationAPI.getNotifications({
         unreadOnly: activeFilter === 'unread',
         limit: 50,
@@ -550,18 +504,10 @@ export default function NotificationsPage() {
         
         setNotifications(transformedNotifications);
         setNotificationCounts(response.data.counts);
-        setRetryCount(0);
       }
     } catch (err: any) {
       console.error('Error loading notifications:', err);
       setError(err.message || 'Failed to load notifications');
-      
-      // Auto-retry logic for network errors
-      if (retryCount < 3 && err.message?.includes('Network error')) {
-        console.log(`Auto-retrying... Attempt ${retryCount + 1}/3`);
-        setTimeout(() => loadNotifications(true), 2000);
-        return;
-      }
       
       // Use fallback data only for demo purposes
       let filteredFallback = fallbackNotifications;
@@ -578,7 +524,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, isAuthenticated, retryCount]);
+  }, [activeFilter, isAuthenticated]);
 
   // Load notifications on component mount and when filter changes
   useEffect(() => {
@@ -586,19 +532,6 @@ export default function NotificationsPage() {
       loadNotifications();
     }
   }, [loadNotifications, isAuthenticated]);
-
-  // Real-time updates - poll for new notifications
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        refreshNotifications();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
 
   // Mark a notification as read
   const markAsRead = async (id: string) => {
