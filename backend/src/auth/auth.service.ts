@@ -40,8 +40,9 @@ export class AuthService {
                 emailVerificationTokenExpires,
             },
         });
-
-        const verificationUrl = `http://localhost:3001/auth/verify-email?token=${verificationToken}`;
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+        //const verificationUrl = `http://localhost:3001/auth/verify-email?token=${verificationToken}`;
+        const verificationUrl = `${frontendUrl}/auth/verify-email?token=${verificationToken}`;
 
         const templateId = this.configService.get<string>('SENDGRID_VERIFICATION_TEMPLATE_ID');
         if (!templateId) {

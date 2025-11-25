@@ -129,7 +129,7 @@ export default function SignUp(props: { disableCustomTheme?: boolean }) {
     try {
       const { accessToken } = await signUp(fullName, email, password);
       localStorage.setItem('accessToken', accessToken);
-      router.push('/profile');
+      router.push('/signin');
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -33,7 +33,8 @@ interface NotificationCounts {
 }
 
 // API Service Functions
-const API_BASE_URL = '/api';
+//const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Helper function to format time
 const formatTime = (dateString: string) => {
