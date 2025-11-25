@@ -11,17 +11,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    
+    // Build the backend URL with query parameters
+    const backendParams = new URLSearchParams();
     const unreadOnly = searchParams.get('unreadOnly');
     const limit = searchParams.get('limit');
     const page = searchParams.get('page');
+    
+    if (unreadOnly) backendParams.append('unreadOnly', unreadOnly);
+    if (limit) backendParams.append('limit', limit);
+    if (page) backendParams.append('page', page);
 
-    // Build query string
-    const params = new URLSearchParams();
-    if (unreadOnly) params.append('unreadOnly', unreadOnly);
-    if (limit) params.append('limit', limit);
-    if (page) params.append('page', page);
-
-    const response = await fetch(`${BACKEND_URL}/notifications?${params}`, {
+    const response = await fetch(`${BACKEND_URL}/notifications?${backendParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Backend responded with status: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -72,7 +74,8 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Backend responded with status: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
