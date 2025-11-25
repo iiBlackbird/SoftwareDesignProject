@@ -5,17 +5,23 @@ import Head from 'next/head';
 import Link from 'next/link';
 import NavigationBar from '../../components/NavigationBar';
 
-// Types (mostly changed from number -> string to fit with DB)
+// Types
 interface Notification {
-  id: string; // Changed from number to string
+  id: string;
   type: 'assignment' | 'update' | 'reminder';
   title: string;
   message: string;
   time: string;
   read: boolean;
-  userId?: string; // Changed from number to string
-  eventId?: string; // Changed from number to string
-  createdAt: string; 
+  userId?: string;
+  eventId?: string;
+  createdAt: string;
+  event?: {
+    id: string;
+    name: string;
+    eventDate?: string;
+    location?: string;
+  };
 }
 
 interface NotificationCounts {
@@ -26,16 +32,8 @@ interface NotificationCounts {
   reminder: number;
 }
 
-interface ApiResponse {
-  success: boolean;
-  data: {
-    notifications: Notification[];
-    counts: NotificationCounts;
-  };
-}
-
 // API Service Functions
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '/api';
 
 // Helper function to format time
 const formatTime = (dateString: string) => {
@@ -56,6 +54,11 @@ const notificationAPI = {
     page?: number; 
   }): Promise<any> {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const params = new URLSearchParams();
       if (options?.unreadOnly) params.append('unreadOnly', 'true');
       if (options?.limit) params.append('limit', options.limit.toString());
@@ -63,65 +66,104 @@ const notificationAPI = {
       
       const response = await fetch(`${API_BASE_URL}/notifications?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Add auth header
+          'Authorization': `Bearer ${token}`,
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch notifications');
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/signin';
+        throw new Error('Unauthorized - Please login again');
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch notifications: ${response.status} - ${errorText}`);
+      }
+      
       return response.json();
     } catch (error) {
-      console.warn('API unavailable, using fallback data');
+      console.error('API Error:', error);
       throw error;
     }
   },
+
   async getUnreadCount(): Promise<any> {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+
       const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/signin';
+        throw new Error('Unauthorized');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch unread count');
       return response.json();
     } catch (error) {
-      console.warn('API unavailable, using fallback data');
+      console.error('API Error:', error);
       throw error;
     }
   },
 
-
- // Mark single notification as read
+  // Mark single notification as read
   async markAsRead(notificationId: string): Promise<any> {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+
       const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/signin';
+        throw new Error('Unauthorized');
+      }
+      
       if (!response.ok) throw new Error('Failed to mark notification as read');
       return response.json();
     } catch (error) {
-      console.warn('API unavailable, using local state only');
-      return { success: true, data: { count: 1 } };
+      console.error('API Error:', error);
+      throw error;
     }
   },
 
   // Mark all notifications as read
   async markAllAsRead(): Promise<any> {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+
       const response = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/signin';
+        throw new Error('Unauthorized');
+      }
+      
       if (!response.ok) throw new Error('Failed to mark all notifications as read');
       return response.json();
     } catch (error) {
-      console.warn('API unavailable, using local state only');
-      return { success: true, data: { count: 1 } };
+      console.error('API Error:', error);
+      throw error;
     }
   },
 };
@@ -240,7 +282,6 @@ const fallbackNotifications: Notification[] = [
   },
 ];
 
-
 // Calculate fallback counts
 const getFallbackCounts = (notifications: Notification[]): NotificationCounts => ({
   all: notifications.length,
@@ -270,6 +311,12 @@ function NotificationItem({ notification, onMarkAsRead }: {
 
   const { icon, color } = getNotificationIcon(notification.type);
 
+  const handleViewDetails = () => {
+    if (notification.eventId) {
+      window.location.href = `/events/${notification.eventId}`;
+    }
+  };
+
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${
       !notification.read ? 'border-l-4 border-l-green-500' : 'border-gray-200 dark:border-gray-700'
@@ -285,16 +332,26 @@ function NotificationItem({ notification, onMarkAsRead }: {
               {notification.title}
             </p>
             <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
-              {notification.time}
+              {formatTime(notification.createdAt)}
             </span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             {notification.message}
           </p>
           
+          {notification.event && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Event: {notification.event.name}
+              {notification.event.eventDate && ` • ${new Date(notification.event.eventDate).toLocaleDateString()}`}
+            </div>
+          )}
+          
           <div className="flex items-center justify-between mt-3">
             <div className="flex space-x-3">
-              <button className="text-xs font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors">
+              <button 
+                onClick={handleViewDetails}
+                className="text-xs font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+              >
                 View Details
               </button>
               {notification.type === 'assignment' && (
@@ -382,67 +439,77 @@ function EmptyState({ filter }: { filter: string }) {
           : `There are no ${filter} notifications matching your current filter.`
         }
       </p>
-      <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-        View All Notifications
-      </button>
+      <Link href="/events">
+        <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          Browse Events
+        </button>
+      </Link>
     </div>
   );
 }
 
 // Main Notifications Page Component
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(fallbackNotifications);
-  const [notificationCounts, setNotificationCounts] = useState<NotificationCounts>(
-    getFallbackCounts(fallbackNotifications)
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationCounts, setNotificationCounts] = useState<NotificationCounts>({
+    all: 0,
+    unread: 0,
+    assignment: 0,
+    update: 0,
+    reminder: 0,
+  });
   const [activeFilter, setActiveFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load notifications from backend with fallback or N/A
+  // Authentication check
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/signin';
+      return;
+    }
+    setIsAuthenticated(true);
+  }, []);
+
+  // Load notifications from backend
   const loadNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+
     try {
       setError(null);
+      setLoading(true);
       
       const response = await notificationAPI.getNotifications({
         unreadOnly: activeFilter === 'unread',
-        limit: 20,
+        limit: 50,
         page: 1,
       });
       
       if (response.success) {
-        // Transform backend data to match frontend interface
         const transformedNotifications = response.data.notifications.map((n: any) => ({
           id: n.id,
-          type: n.type as 'assignment' | 'update' | 'reminder',
+          type: n.type,
           title: n.title,
           message: n.message,
-          time: n.time, // or use n.createdAt for display
+          time: n.createdAt,
           read: n.read,
           userId: n.userId,
           eventId: n.eventId,
           createdAt: n.createdAt,
+          event: n.event,
         }));
         
         setNotifications(transformedNotifications);
-        
-        // Calculate counts from the data
-        const counts = {
-            all: response.data.total,
-            unread: transformedNotifications.filter((n: Notification) => !n.read).length,
-            assignment: transformedNotifications.filter((n: Notification) => n.type === 'assignment').length,
-            update: transformedNotifications.filter((n: Notification) => n.type === 'update').length,
-            reminder: transformedNotifications.filter((n: Notification) => n.type === 'reminder').length,
-        };
-        
-        setNotificationCounts(counts);
+        setNotificationCounts(response.data.counts);
       }
-    } catch (err) {
-      // Use fallback data when API is unavailable
-      setError('Backend unavailable. Using hardcode/demo data.');
+    } catch (err: any) {
+      console.error('Error loading notifications:', err);
+      setError(err.message || 'Failed to load notifications');
       
-      // Filter fallback data based on active filter
+      // Use fallback data only for demo purposes
       let filteredFallback = fallbackNotifications;
       if (activeFilter !== 'all') {
         if (activeFilter === 'unread') {
@@ -457,12 +524,14 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, isAuthenticated]);
 
   // Load notifications on component mount and when filter changes
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    if (isAuthenticated) {
+      loadNotifications();
+    }
+  }, [loadNotifications, isAuthenticated]);
 
   // Mark a notification as read
   const markAsRead = async (id: string) => {
@@ -470,20 +539,19 @@ export default function NotificationsPage() {
       const response = await notificationAPI.markAsRead(id);
       
       if (response.success) {
-        // Update local state to reflect the change
         setNotifications(prev => 
           prev.map(notification => 
             notification.id === id ? { ...notification, read: true } : notification
           )
         );
-        // Update counts
         setNotificationCounts(prev => ({
           ...prev,
           unread: Math.max(0, prev.unread - 1)
         }));
       }
-    } catch (err) {
-      // If API fails, update local state for better UX
+    } catch (err: any) {
+      setError(err.message || 'Failed to mark notification as read');
+      // Update UI optimistically
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === id ? { ...notification, read: true } : notification
@@ -502,18 +570,17 @@ export default function NotificationsPage() {
       const response = await notificationAPI.markAllAsRead();
       
       if (response.success) {
-        // Update local state to reflect all notifications are read
         setNotifications(prev => 
           prev.map(notification => ({ ...notification, read: true }))
         );
-        // Update counts
         setNotificationCounts(prev => ({
           ...prev,
           unread: 0
         }));
       }
-    } catch (err) {
-      // If API fails, update local state
+    } catch (err: any) {
+      setError(err.message || 'Failed to mark all notifications as read');
+      // Update UI optimistically
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       );
@@ -533,6 +600,17 @@ export default function NotificationsPage() {
       setIsRefreshing(false);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <i className="fas fa-spinner animate-spin text-4xl text-green-600 mb-4"></i>
+          <p className="text-gray-600 dark:text-gray-400">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -558,13 +636,13 @@ export default function NotificationsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
             <div className="flex items-center">
-              <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-              <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+              <i className="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+              <p className="text-yellow-700 dark:text-yellow-300 text-sm">{error}</p>
               <button 
                 onClick={() => setError(null)}
-                className="ml-auto text-red-500 hover:text-red-700"
+                className="ml-auto text-yellow-500 hover:text-yellow-700"
               >
                 <i className="fas fa-times"></i>
               </button>
