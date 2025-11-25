@@ -29,7 +29,9 @@ export default function VolunteerMatchingPage() {
 
     async function fetchMatches() {
       try {
-        const res = await fetch(`http://localhost:3000/user/volunteer-matching`, {
+        //const res = await fetch(`http://localhost:3000/user/volunteer-matching`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/volunteer-matching`, {
+
           headers: { Authorization: `Bearer ${token}` }, // send JWT
         });
         if (!res.ok) throw new Error("Failed to fetch matches");
@@ -56,7 +58,8 @@ export default function VolunteerMatchingPage() {
     if (!token) return alert("You must be logged in to enroll.");
 
     try {
-      const res = await fetch("http://localhost:3000/user/volunteer-matching/enroll", {
+      //const res = await fetch("http://localhost:3000/user/volunteer-matching/enroll", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/volunteer-matching/enroll`, {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",

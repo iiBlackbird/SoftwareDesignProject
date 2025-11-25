@@ -29,7 +29,8 @@ export default function UserVolunteerHistory() {
       return;
     }
 
-    fetch("http://localhost:3000/user/volunteer-history", {
+    //fetch("http://localhost:3000/user/volunteer-history", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/volunteer-history`, {
       headers: {
         Authorization: `Bearer ${token}`, // send JWT to backend
       },

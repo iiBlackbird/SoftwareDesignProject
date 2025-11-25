@@ -12,9 +12,12 @@ import { AdminVolunteerMatchingModule } from './admin-volunteer-matching/admin-v
 import { NotificationModule } from './notification/notification.module';
 import { AdminEventsModule } from './admin-events/admin-events.module';
 import { UserProfileModule } from './user-profile/user-profile.module';
+import { ReportModule } from './admin-reports/report.module';
 @Module({
   imports: [
-    ConfigModule.forRoot({ envFilePath: '../.env', isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     AuthModule,
     EmailModule,
     EventModule,
@@ -24,7 +27,8 @@ import { UserProfileModule } from './user-profile/user-profile.module';
     AdminVolunteerMatchingModule,
     NotificationModule,
     AdminEventsModule,
-    UserProfileModule
+    UserProfileModule,
+    ReportModule
   ],
   controllers: [AppController],
   providers: [AppService],

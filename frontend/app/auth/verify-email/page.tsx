@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { verifyEmail } from '../../../lib/auth';
 import NavigationBar from '../../../components/NavigationBar';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [message, setMessage] = React.useState('Verifying your email...');
@@ -34,5 +35,13 @@ export default function VerifyEmailPage() {
         <Typography>{message}</Typography>
       </Container>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SuggestedMatchDto } from './dto/suggested-match.dto';
 import { AssignVolunteerResponseDto } from './dto/assign-volunteer-response.dto';
-import { Prisma } from 'generated/prisma';
+//import { Prisma } from 'generated/prisma';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminVolunteerMatchingService {

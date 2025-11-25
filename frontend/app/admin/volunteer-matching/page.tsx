@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import NavigationBar from '../../../components/NavigationBar';
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 type VolunteerMatch = {
   volunteerId: string;
   volunteerName: string;
@@ -25,8 +25,8 @@ export default function VolunteerMatchingPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // 1️⃣ Fetch suggested matches
-        const resMatches = await fetch("http://localhost:3000/admin/volunteer-matching");
+        //  Fetch suggested matches
+        const resMatches = await fetch(`${API_URL}/admin/volunteer-matching`);
         if (!resMatches.ok) throw new Error("Failed to fetch matches");
         const matchesData: VolunteerMatch[] = await resMatches.json();
         setMatches(matchesData);
@@ -38,8 +38,8 @@ export default function VolunteerMatchingPage() {
         });
         setAssignments(initialAssignments);
 
-        // 2️⃣ Fetch all upcoming events
-        const resEvents = await fetch("http://localhost:3000/admin/events/upcoming");
+        // Fetch all upcoming events
+        const resEvents = await fetch(`${API_URL}/admin/events/upcoming`);
         if (!resEvents.ok) throw new Error("Failed to fetch events");
 
         const eventsData = await resEvents.json();
@@ -71,7 +71,7 @@ export default function VolunteerMatchingPage() {
 
     try {
       const res = await fetch(
-        "http://localhost:3000/admin/volunteer-matching/assign",
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/volunteer-matching/assign`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -19,11 +19,33 @@ export default function VolunteerHistory() {
   const [history, setHistory] = useState<VolunteerRecord[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/admin/volunteer-history")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/volunteer-history`)
+    //fetch(`http://localhost:3000/admin/volunteer-history`)
       .then((res) => res.json())
       .then((data) => setHistory(data))
       .catch((err) => console.error("Error fetching data:", err));
   }, []);
+
+  const downloadFile = async (type: 'csv' | 'pdf') => {
+    try {
+      //const response = await fetch(`http://localhost:3000/admin/reports/volunteer-history/${type}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/reports/volunteer-history/${type}`);
+      if (!response.ok) {
+        console.error("Failed to download file:", response.statusText);
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `volunteer_history.${type}`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading file:", err);
+    }
+  };
+  
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -37,6 +59,16 @@ export default function VolunteerHistory() {
           <p className="mt-3 text-lg text-gray-600 dark:text-gray-300">
             Track the volunteer history
           </p>
+
+          {/* Add buttons for CSV and PDF download */}
+          <div className="mt-4 flex justify-center gap-4">
+            <button onClick={() => downloadFile('csv')} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+              Download CSV
+            </button>
+            <button onClick={() => downloadFile('pdf')} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              Download PDF
+            </button>
+          </div>
         </div>
       </header>
 

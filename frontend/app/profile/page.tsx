@@ -95,7 +95,9 @@ export default function UserProfile() {
       return;
     }
 
-    fetch("http://localhost:3000/user/profile", {
+    //fetch("http://localhost:3000/user/profile", {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
+
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -183,7 +185,8 @@ export default function UserProfile() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/user/profile", {
+      //const res = await fetch("http://localhost:3000/user/profile", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

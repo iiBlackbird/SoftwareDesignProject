@@ -1,5 +1,12 @@
 {
   "dependencies": {
-    "@nestjs/config": "^4.0.2"
+    "@nestjs/config": "^4.0.2",
+    "csv-writer": "^1.6.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "jspdf": "^3.0.4",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.17.3"
   }
 }

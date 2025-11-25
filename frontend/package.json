@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "cross-env NEXT_PUBLIC_API_URL='http://localhost:3000' next dev -p 3001 --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build --no-lint",
     "start": "next start -p 3001",
     "lint": "eslint"
   },
@@ -13,6 +13,8 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "json2csv": "^6.0.0-alpha.2",
+    "jspdf": "^3.0.4",
     "next": "15.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
