@@ -67,31 +67,20 @@ export class NotificationController {
   @Get('type/:type')
   async getNotificationsByType(
     @Req() req,
-    @Param('type') type: string,
+    @Param('type') type: NotificationType, 
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
   ) {
     const userId = req.user.id;
     
-    // Convert string parameter to NotificationType enum
-    let notificationType: NotificationType;
-    switch (type) {
-      case 'assignment':
-        notificationType = NotificationType.ASSIGNMENT;
-        break;
-      case 'update':
-        notificationType = NotificationType.UPDATE;
-        break;
-      case 'reminder':
-        notificationType = NotificationType.REMINDER;
-        break;
-      default:
-        throw new BadRequestException('Invalid notification type. Use: assignment, update, or reminder');
+    // Validate that the type is a valid NotificationType
+    if (!Object.values(NotificationType).includes(type)) {
+      throw new BadRequestException('Invalid notification type. Use: assignment, update, or reminder');
     }
     
     const result = await this.notificationService.getNotificationsByType(
       userId, 
-      notificationType, 
+      type, 
       { limit, page }
     );
     
