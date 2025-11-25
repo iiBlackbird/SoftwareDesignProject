@@ -127,4 +127,29 @@ export class EventService {
       throw new Error(`Failed to update event: ${error.message}`);
     }
   }
+
+  async deleteEvent(id: string) {
+    try {
+      // First check if the event exists
+      const existingEvent = await this.prisma.event.findUnique({
+        where: { id },
+      });
+
+      if (!existingEvent) {
+        throw new Error('Event not found');
+      }
+
+      // Delete the event
+      await this.prisma.event.delete({
+        where: { id },
+      });
+
+      return {
+        success: true,
+        message: 'Event deleted successfully',
+      };
+    } catch (error) {
+      throw new Error(`Failed to delete event: ${error.message}`);
+    }
+  }
 }

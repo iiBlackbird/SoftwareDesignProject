@@ -22,6 +22,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -47,6 +48,35 @@ export default function EventsPage() {
 
     fetchEvents();
   }, []);
+
+  const handleDeleteEvent = async (eventId: string, eventName: string) => {
+    if (!confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeleteLoading(eventId);
+      setError(null);
+
+      const response = await fetch(`${API_URL}/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete event');
+      }
+
+      // Remove the deleted event from the local state
+      setEvents(events => events.filter(event => event.id !== eventId));
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete event');
+      console.error('Error deleting event:', err);
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
@@ -115,9 +145,36 @@ export default function EventsPage() {
             {events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow relative"
               >
-                <div className="flex justify-between items-start mb-4">
+                {/* Delete button in top right */}
+                <button
+                  onClick={() => handleDeleteEvent(event.id, event.name)}
+                  disabled={deleteLoading === event.id}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete event"
+                >
+                  {deleteLoading === event.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  )}
+                </button>
+
+                <div className="flex justify-between items-start mb-4 pr-8">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                     {event.name}
                   </h3>
