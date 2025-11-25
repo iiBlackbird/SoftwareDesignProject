@@ -50,7 +50,7 @@ export class AuthService {
 
         await this.emailService.send({
             to: user.email,
-            from: 'matthewcg832@gmail.com', // Replace with your verified sender
+            from: 'matthewcg832@gmail.com',
             templateId: templateId,
             dynamicTemplateData: {
                 name: user.fullName,

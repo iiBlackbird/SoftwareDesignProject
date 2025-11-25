@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationDto, NotificationType } from './dto/create-notification.dto';
 
@@ -23,7 +23,7 @@ export class NotificationService {
       });
     } catch (error) {
       this.logger.error(`Failed to create notification: ${error.message}`);
-      throw error;
+      throw new InternalServerErrorException(`Failed to create notification: ${error.message}`);
     }
   }
 
