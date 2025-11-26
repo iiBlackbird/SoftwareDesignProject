@@ -81,50 +81,50 @@ async function main() {
   });
 
   // Create Events with diverse location styles
-  await prisma.event.createMany({
-    data: [
-      {
-        name: 'Community Clean-Up',
-        description: 'Join us to clean the downtown area of Chicago.',
-        location: 'Downtown Chicago, IL',
-        requiredSkills: ['Event Management'],
-        urgency: 'medium',
-        eventDate: new Date('2025-11-05'),
-      },
-      {
-        name: 'Food Drive',
-        description: 'Help sort and distribute food in Austin.',
-        location: 'Austin, TX',
-        requiredSkills: ['Cooking'],
-        urgency: 'high',
-        eventDate: new Date('2025-11-03'),
-      },
-      {
-        name: 'Online Volunteer Tutoring',
-        description: 'Virtual event helping students learn math.',
-        location: 'Online',
-        requiredSkills: ['Teaching'],
-        urgency: 'low',
-        eventDate: new Date('2025-11-09'),
-      },
-      {
-        name: 'Central Park Tree Planting',
-        description: 'Help plant trees in Central Park.',
-        location: 'Central Park, New York',
-        requiredSkills: ['First Aid', 'Event Management'],
-        urgency: 'medium',
-        eventDate: new Date('2025-11-02'),
-      },
-      {
-        name: 'Museum Fundraiser',
-        description: 'Assist with ticketing and guest coordination.',
-        location: 'Metropolitan Museum, NYC',
-        requiredSkills: ['Fundraising', 'Event Management'],
-        urgency: 'high',
-        eventDate: new Date('2025-11-10'),
-      },
-    ],
-  });
+  // await prisma.event.createMany({
+  //   data: [
+  //     {
+  //       name: 'Community Clean-Up',
+  //       description: 'Join us to clean the downtown area of Chicago.',
+  //       location: 'Downtown Chicago, IL',
+  //       requiredSkills: ['Event Management'],
+  //       urgency: 'medium',
+  //       eventDate: new Date('2025-11-05'),
+  //     },
+  //     {
+  //       name: 'Food Drive',
+  //       description: 'Help sort and distribute food in Austin.',
+  //       location: 'Austin, TX',
+  //       requiredSkills: ['Cooking'],
+  //       urgency: 'high',
+  //       eventDate: new Date('2025-11-03'),
+  //     },
+  //     {
+  //       name: 'Online Volunteer Tutoring',
+  //       description: 'Virtual event helping students learn math.',
+  //       location: 'Online',
+  //       requiredSkills: ['Teaching'],
+  //       urgency: 'low',
+  //       eventDate: new Date('2025-11-09'),
+  //     },
+  //     {
+  //       name: 'Central Park Tree Planting',
+  //       description: 'Help plant trees in Central Park.',
+  //       location: 'Central Park, New York',
+  //       requiredSkills: ['First Aid', 'Event Management'],
+  //       urgency: 'medium',
+  //       eventDate: new Date('2025-11-02'),
+  //     },
+  //     {
+  //       name: 'Museum Fundraiser',
+  //       description: 'Assist with ticketing and guest coordination.',
+  //       location: 'Metropolitan Museum, NYC',
+  //       requiredSkills: ['Fundraising', 'Event Management'],
+  //       urgency: 'high',
+  //       eventDate: new Date('2025-11-10'),
+  //     },
+  //   ],
+  // });
 
   console.log('Seed data created successfully!');
 }

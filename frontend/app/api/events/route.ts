@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const response = await fetch(`${BACKEND_URL}/events`, {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    let url = `${BACKEND_URL}/events`;
+    if (userId) {
+      url += `?userId=${userId}`;
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
