@@ -215,4 +215,91 @@ export class ReportService {
     await browser.close();
     return Buffer.from(pdf);
   }
+
+  async generateVolunteerHistoryTXT(): Promise<string> {
+    const records = await this.getVolunteerHistory();
+
+    let txtContent = '';
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += '                     VOLUNTEER ACTIVITY REPORT\n';
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += `Generated on: ${new Date().toLocaleString()}\n`;
+    txtContent += `Total Records: ${records.length}\n`;
+    txtContent += '='.repeat(80) + '\n\n';
+
+    if (records.length === 0) {
+      txtContent += 'No volunteer history records found.\n';
+    } else {
+      records.forEach((record, index) => {
+        txtContent += `Record #${index + 1}\n`;
+        txtContent += '-'.repeat(40) + '\n';
+        txtContent += `Volunteer:   ${record.user.fullName ?? 'N/A'}\n`;
+        txtContent += `Event:       ${record.event.name ?? 'N/A'}\n`;
+        txtContent += `Description: ${record.event.description ?? ''}\n`;
+        txtContent += `Location:    ${record.event.location ?? ''}\n`;
+        txtContent += `Skills:      ${record.event.requiredSkills.join(', ')}\n`;
+        txtContent += `Urgency:     ${record.event.urgency ?? ''}\n`;
+        txtContent += `Event Date:  ${record.event.eventDate?.toISOString().split('T')[0] ?? ''}\n`;
+        txtContent += `Status:      ${record.status ?? ''}\n`;
+        txtContent += `Created:     ${record.createdAt.toISOString().split('T')[0]}\n`;
+        txtContent += '\n';
+      });
+    }
+
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += '                          END OF REPORT\n';
+    txtContent += '='.repeat(80) + '\n';
+
+    return txtContent;
+  }
+
+  async generateEventAssignmentTXT(): Promise<string> {
+    const events = await this.getEventAssignments();
+
+    let txtContent = '';
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += '                     EVENT ASSIGNMENT REPORT\n';
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += `Generated on: ${new Date().toLocaleString()}\n`;
+    txtContent += `Total Events: ${events.length}\n`;
+    txtContent += '='.repeat(80) + '\n\n';
+
+    if (events.length === 0) {
+      txtContent += 'No events with assignments found.\n';
+    } else {
+      events.forEach((event, eventIndex) => {
+        txtContent += `Event #${eventIndex + 1}\n`;
+        txtContent += '='.repeat(60) + '\n';
+        txtContent += `Event Name:  ${event.name}\n`;
+        txtContent += `Location:    ${event.location}\n`;
+        txtContent += `Date:        ${event.eventDate.toISOString().split('T')[0]}\n`;
+        txtContent += `Description: ${event.description ?? ''}\n`;
+        txtContent += `Skills:      ${event.requiredSkills.join(', ')}\n`;
+        txtContent += `Urgency:     ${event.urgency ?? ''}\n`;
+        txtContent += '\n';
+
+        if (event.volunteerHistories.length === 0) {
+          txtContent += '  No volunteers assigned to this event.\n';
+        } else {
+          txtContent += `  Assigned Volunteers (${event.volunteerHistories.length}):\n`;
+          txtContent += '  ' + '-'.repeat(50) + '\n';
+          
+          event.volunteerHistories.forEach((vh, vhIndex) => {
+            txtContent += `  ${vhIndex + 1}. ${vh.user.fullName ?? 'N/A'}\n`;
+            txtContent += `     Status: ${vh.status}\n`;
+            txtContent += `     Joined: ${vh.createdAt.toISOString().split('T')[0]}\n`;
+            txtContent += '\n';
+          });
+        }
+        
+        txtContent += '\n';
+      });
+    }
+
+    txtContent += '='.repeat(80) + '\n';
+    txtContent += '                          END OF REPORT\n';
+    txtContent += '='.repeat(80) + '\n';
+
+    return txtContent;
+  }
 }

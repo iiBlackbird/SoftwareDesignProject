@@ -37,4 +37,20 @@ export class ReportController {
     res.attachment('event_assignments.pdf');
     res.send(pdf);
   }
+
+   @Get('volunteer-history/txt')
+  async downloadVolunteerHistoryTXT(@Res() res: Response) {
+    const txt = await this.reportService.generateVolunteerHistoryTXT();
+    res.header('Content-Type', 'text/plain');
+    res.attachment('volunteer_history.txt');
+    res.send(txt);
+  }
+
+  @Get('event-assignments/txt')
+  async downloadEventAssignmentsTXT(@Res() res: Response) {
+    const txt = await this.reportService.generateEventAssignmentTXT();
+    res.header('Content-Type', 'text/plain');
+    res.attachment('event_assignments.txt');
+    res.send(txt);
+  }
 }
