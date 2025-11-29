@@ -2,16 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { NotificationService } from '../notification/notification.service'; 
-import { NotificationType } from '../notification/dto/create-notification.dto'; 
+ 
 
 @Injectable()
 export class EventService {
   
-  constructor(private prisma: PrismaService,
-    // inject noti service
-    private notificationService: NotificationService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   
 
